@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>President</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Top bar -->
+    <div id="topbar">
+      <span id="game-title">President</span>
+      <div id="topbar-controls">
+        <button id="btn-settings">⚙ Settings</button>
+        <button id="btn-new-game">New Game</button>
+      </div>
+    </div>
+
+    <!-- Main table -->
+    <div id="table">
+
+      <!-- AI player seats — positions filled dynamically -->
+      <div class="seat" id="seat-top-left"   data-seat="1"></div>
+      <div class="seat" id="seat-top-center" data-seat="2"></div>
+      <div class="seat" id="seat-top-right"  data-seat="3"></div>
+      <div class="seat" id="seat-mid-left"   data-seat="4"></div>
+      <div class="seat" id="seat-mid-right"  data-seat="5"></div>
+      <div class="seat" id="seat-bot-left"   data-seat="6"></div>
+
+      <!-- Center play area -->
+      <div id="play-area">
+        <div id="pile-label">Pile</div>
+        <div id="pile"></div>
+        <div id="round-info"></div>
+      </div>
+
+    </div>
+
+    <!-- Human player hand -->
+    <div id="player-zone">
+      <div id="player-info">
+        <span id="player-name">You</span>
+        <span id="player-role" class="role-badge"></span>
+      </div>
+      <div id="hand"></div>
+      <div id="action-bar">
+        <button id="btn-pass"  class="action-btn" disabled>Pass</button>
+        <button id="btn-play"  class="action-btn primary" disabled>Play</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Settings modal -->
+  <div id="modal-settings" class="modal hidden">
+    <div class="modal-box">
+      <h2>Settings</h2>
+      <label>
+        Number of players
+        <select id="setting-players">
+          <option value="2">2 (you + 1 AI)</option>
+          <option value="3">3 (you + 2 AI)</option>
+          <option value="4" selected>4 (you + 3 AI)</option>
+          <option value="5">5 (you + 4 AI)</option>
+          <option value="6">6 (you + 5 AI)</option>
+          <option value="7">7 (you + 6 AI)</option>
+        </select>
+      </label>
+      <label class="toggle-row">
+        One-time-around rule
+        <input type="checkbox" id="setting-one-time-around" checked>
+        <span class="toggle-hint">When everyone passes back to the leader, trick ends automatically</span>
+      </label>
+      <label class="toggle-row">
+        Card trading between rounds
+        <input type="checkbox" id="setting-card-trading" checked>
+        <span class="toggle-hint">President takes Asshole's best card(s); Asshole receives any card back</span>
+      </label>
+      <div class="names-section">
+        <div class="names-heading">AI Player Names</div>
+        <div id="ai-names-grid">
+          <label class="name-row">AI 1<input type="text" id="ai-name-1" maxlength="12" placeholder="Alice"></label>
+          <label class="name-row">AI 2<input type="text" id="ai-name-2" maxlength="12" placeholder="Bob"></label>
+          <label class="name-row">AI 3<input type="text" id="ai-name-3" maxlength="12" placeholder="Carlos"></label>
+          <label class="name-row">AI 4<input type="text" id="ai-name-4" maxlength="12" placeholder="Diana"></label>
+          <label class="name-row">AI 5<input type="text" id="ai-name-5" maxlength="12" placeholder="Eddie"></label>
+          <label class="name-row">AI 6<input type="text" id="ai-name-6" maxlength="12" placeholder="Fiona"></label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-settings-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card trading modal -->
+  <div id="modal-trading" class="modal hidden">
+    <div class="modal-box">
+      <h2 id="trading-title">Card Trading</h2>
+      <p id="trading-desc"></p>
+      <div id="trading-received-section">
+        <div class="trade-label">You received:</div>
+        <div id="trading-received-cards"></div>
+      </div>
+      <div id="trading-give-section">
+        <div class="trade-label" id="trading-give-label">Select cards to give:</div>
+        <div id="trading-give-cards"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-trading-confirm" class="action-btn primary" disabled>Confirm Trade</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New game / start screen overlay -->
+  <div id="modal-start" class="modal">
+    <div class="modal-box start-box">
+      <h1>President</h1>
+      <p class="subtitle">aka Asshole</p>
+      <div class="start-options">
+        <label>
+          Players
+          <select id="start-players">
+            <option value="2">2 players</option>
+            <option value="3">3 players</option>
+            <option value="4" selected>4 players</option>
+            <option value="5">5 players</option>
+            <option value="6">6 players</option>
+            <option value="7">7 players</option>
+          </select>
+        </label>
+        <label class="toggle-row">
+          <span>One-time-around</span>
+          <input type="checkbox" id="start-one-time-around" checked>
+        </label>
+        <label class="toggle-row">
+          <span>Card trading</span>
+          <input type="checkbox" id="start-card-trading" checked>
+        </label>
+      </div>
+      <button id="btn-start" class="action-btn primary large">Deal</button>
+    </div>
+  </div>
+
+  <script src="cards.js"></script>
+  <script src="game.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

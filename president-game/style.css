@@ -1,0 +1,486 @@
+/* ── Reset & base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green:       #2d6a4f;
+  --green-light: #40916c;
+  --felt:        #1b4332;
+  --card-w:      70px;
+  --card-h:      100px;
+  --card-radius: 8px;
+  --red:         #c0392b;
+  --gold:        #f4d03f;
+  --shadow:      0 4px 12px rgba(0,0,0,.5);
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', sans-serif;
+  background: #111;
+  color: #eee;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Top bar ──────────────────────────────────────────────── */
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0d0d0d;
+  padding: 6px 14px;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+#game-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+#topbar-controls { display: flex; gap: 8px; }
+
+#topbar-controls button {
+  background: #222;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .85rem;
+}
+#topbar-controls button:hover { background: #333; }
+
+/* ── Table ────────────────────────────────────────────────── */
+#table {
+  flex: 1;
+  background: radial-gradient(ellipse at center, var(--green-light) 0%, var(--felt) 60%, #0f2418 100%);
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  /* seats snap to corners/edges; center cell = play area */
+}
+
+/* ── Seats ────────────────────────────────────────────────── */
+.seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  gap: 4px;
+}
+
+.seat-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.seat-name {
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ccc;
+}
+
+.seat-role { font-size: .65rem; }
+
+.seat-style {
+  font-size: .58rem;
+  text-transform: capitalize;
+  letter-spacing: .5px;
+  opacity: .6;
+  margin-top: -2px;
+}
+.seat-style-conservative { color: #60a5fa; }
+.seat-style-neutral       { color: #9ca3af; }
+.seat-style-aggressive    { color: #f87171; }
+
+.seat-cards {
+  display: flex;
+  gap: -8px;
+}
+
+/* Face-down AI cards */
+.card-back {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--card-radius);
+  background: linear-gradient(135deg, #1a237e 0%, #283593 40%, #1a237e 100%);
+  border: 2px solid #fff3;
+  box-shadow: var(--shadow);
+  margin-left: -20px;
+  position: relative;
+}
+.card-back:first-child { margin-left: 0; }
+
+/* Show card count badge on back of first AI card */
+.card-back.count-badge::after {
+  content: attr(data-count);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ffffffcc;
+}
+
+/* Active player highlight */
+.seat.active .seat-inner {
+  outline: 2px solid var(--gold);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+/* ── Play area (center) ───────────────────────────────────── */
+#play-area {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+#pile-label {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #aaa;
+}
+
+#pile {
+  display: flex;
+  gap: 6px;
+  min-height: calc(var(--card-h) + 8px);
+  align-items: center;
+  justify-content: center;
+}
+
+#round-info {
+  font-size: .8rem;
+  color: #bbb;
+  text-align: center;
+  min-height: 1.2em;
+}
+
+/* ── Cards ────────────────────────────────────────────────── */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--card-radius);
+  background: #fff;
+  border: 1.5px solid #ccc;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 5px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: transform .15s, box-shadow .15s;
+}
+
+.card:hover { transform: translateY(-6px); box-shadow: 0 8px 20px rgba(0,0,0,.6); }
+
+.card.selected {
+  transform: translateY(-14px);
+  box-shadow: 0 12px 24px rgba(0,0,0,.7);
+  outline: 2px solid var(--gold);
+}
+
+.card.red .card-value, .card.red .card-suit { color: var(--red); }
+.card.black .card-value, .card.black .card-suit { color: #111; }
+
+.card-value {
+  font-size: .9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.card-suit {
+  font-size: 1.6rem;
+  line-height: 1;
+  text-align: center;
+  margin: auto 0;
+}
+
+.card-value-bottom {
+  font-size: .9rem;
+  font-weight: 700;
+  line-height: 1;
+  align-self: flex-end;
+  transform: rotate(180deg);
+}
+
+/* Dimmed ghost of last played cards when pile is empty */
+.card.last-play {
+  opacity: 0.3;
+  filter: grayscale(40%);
+  cursor: default;
+}
+
+/* 2s get a special glow */
+.card.trump {
+  background: linear-gradient(135deg, #fffde7, #fff9c4);
+  border-color: #f9a825;
+  box-shadow: 0 0 12px #f9a82588, var(--shadow);
+}
+
+/* ── Player zone ──────────────────────────────────────────── */
+#player-zone {
+  background: linear-gradient(to top, #0d0d0d 60%, transparent);
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+#player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#player-name {
+  font-size: .85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.role-badge {
+  font-size: .7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.role-president  { background: var(--gold); color: #333; }
+.role-asshole    { background: #7f1d1d; color: #fca5a5; }
+.role-vp         { background: #78716c; color: #e7e5e4; }
+.role-va         { background: #44403c; color: #a8a29e; }
+.role-neutral    { background: #374151; color: #9ca3af; }
+
+#hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+/* Fan/overlap the hand if many cards */
+#hand .card { margin-left: -10px; }
+#hand .card:first-child { margin-left: 0; }
+
+/* ── Action bar ───────────────────────────────────────────── */
+#action-bar {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  padding: 8px 28px;
+  border: none;
+  border-radius: 6px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  letter-spacing: .5px;
+}
+.action-btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+.action-btn:not(:disabled):hover { transform: translateY(-2px); }
+.action-btn:not(:disabled):active { transform: translateY(0); }
+
+.action-btn { background: #374151; color: #d1d5db; }
+.action-btn.primary { background: #166534; color: #bbf7d0; }
+.action-btn.large { padding: 12px 48px; font-size: 1.1rem; }
+
+/* ── Modals ───────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+
+.modal-box {
+  background: #1c1c1e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 28px 36px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-box h1 { font-size: 2.5rem; color: var(--gold); text-align: center; letter-spacing: 4px; }
+.modal-box h2 { font-size: 1.3rem; color: #ddd; }
+.subtitle { text-align: center; color: #888; font-size: .9rem; letter-spacing: 2px; }
+
+.modal-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: .85rem;
+  color: #aaa;
+}
+
+.modal-box label select {
+  background: #2a2a2e;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: .9rem;
+}
+
+.toggle-row {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px !important;
+}
+
+.toggle-hint {
+  font-size: .7rem;
+  color: #666;
+  width: 100%;
+}
+
+.start-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.names-heading {
+  font-size: .85rem;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+#ai-names-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.name-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  font-size: .8rem !important;
+  color: #666 !important;
+  white-space: nowrap;
+}
+
+.name-row input[type="text"] {
+  flex: 1;
+  background: #2a2a2e;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: .85rem;
+  min-width: 0;
+}
+
+.name-row input[type="text"]:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.trade-label {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #777;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+#trading-received-cards,
+#trading-give-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#trading-give-cards .card { cursor: pointer; }
+
+#modal-trading .modal-box {
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#trading-desc {
+  color: #aaa;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.modal-actions button {
+  padding: 6px 20px;
+  background: #2a2a2e;
+  border: 1px solid #444;
+  color: #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.modal-actions button:hover { background: #333; }
+
+/* ── Notifications ────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #f3f4f6;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: .85rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .3s;
+  z-index: 200;
+}
+#toast.show { opacity: 1; }
+
+/* ── Responsive tweaks ────────────────────────────────────── */
+@media (max-width: 500px) {
+  :root { --card-w: 52px; --card-h: 76px; }
+  .card-suit { font-size: 1.2rem; }
+}
