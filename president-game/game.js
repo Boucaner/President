@@ -11,12 +11,25 @@ const state = {
   passCount: 0,      // consecutive passes since last play (continue-around only)
   trickTurns: 0,     // total actions (plays+passes) taken this trick
   trickPlayerCount: 0, // active players when this trick started
+  lastPlayedBy: 0,    // index of the player who most recently played a card
   roundNum: 0,
   finishOrder: [],   // player indices in finish order this round
   settings: {
     numPlayers: 4,
     oneTimeAround: true,
     cardTrading: true,
+    autoPass: true,
+    gameName: (() => {
+      try { const s = localStorage.getItem('presidentGameName'); if (s) return s; } catch {}
+      return 'President';
+    })(),
+    roleNames: (() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('presidentRoleNames'));
+        if (s && typeof s === 'object') return s;
+      } catch {}
+      return { 'President': 'President', 'Vice President': 'Vice President', 'Neutral': 'Neutral', 'Vice Asshole': 'Vice Asshole', 'Asshole': 'Asshole' };
+    })(),
     aiNames: (() => {
       try {
         const s = JSON.parse(localStorage.getItem('presidentAiNames'));
@@ -70,6 +83,7 @@ function dealRound() {
   state.passCount = 0;
   state.trickTurns = 0;
   state.trickPlayerCount = n;
+  state.lastPlayedBy = 0;
   state.trickLog = [];
   state.currentTrickPlays = [];
   state.lastPlay = null;
@@ -140,6 +154,7 @@ function applyPlay(playerIdx, cards) {
 
   state.pile = cards;
   state.trickLeader = playerIdx;
+  state.lastPlayedBy = playerIdx;
   state.passCount = 0;
   state.trickTurns++;
   const playRecord = { playerName: player.name, cards: [...cards] };
@@ -166,10 +181,6 @@ function applyPlay(playerIdx, cards) {
   }
 
   advanceTurn(playerIdx);
-
-  if (state.players[state.trickLeader].finished) {
-    state.trickLeader = state.currentTurn;
-  }
 }
 
 function applyPass(playerIdx) {
@@ -183,9 +194,13 @@ function applyPass(playerIdx) {
       return;
     }
   } else {
-    // Continue-around: ends only when everyone passes consecutively
+    // Continue-around: trick ends when all active players except the last one who played
+    // have passed consecutively. If the last player to play has since finished, all
+    // remaining active players must pass.
     const activePlayers = state.players.filter(p => !p.finished);
-    if (state.passCount >= activePlayers.length) {
+    const lastPlayerActive = !state.players[state.lastPlayedBy].finished;
+    const neededPasses = activePlayers.length - (lastPlayerActive ? 1 : 0);
+    if (state.passCount >= neededPasses) {
       endTrick(state.trickLeader);
       return;
     }
@@ -212,7 +227,11 @@ function endTrick(winnerIdx) {
   state.trickPlayerCount = state.players.filter(p => !p.finished).length;
 
   if (state.players[winnerIdx].finished) {
-    const next = nextActivePlayer(winnerIdx);
+    // Round 1 (placement): no roles yet, so next player clockwise leads
+    // Round 2+: highest-ranked remaining player (lowest index after reorderSeats) leads
+    const next = state.roundNum === 1
+      ? nextActivePlayer(winnerIdx)
+      : state.players.findIndex(p => !p.finished);
     state.trickLeader = next;
     state.currentTurn = next;
   } else {

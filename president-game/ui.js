@@ -27,7 +27,23 @@ let selectedCards = [];
 let tradeSelectedCards = [];
 let aiDelay = 800; // ms between AI moves
 
-console.log('%c[President] ui.js loaded — build 14', 'color:lime;font-weight:bold');
+const ROLE_KEYS = ['President', 'Vice President', 'Neutral', 'Vice Asshole', 'Asshole'];
+const ROLE_IDS  = ['president', 'vp', 'neutral', 'va', 'asshole'];
+
+function displayRoleName(role) {
+  if (!role) return '';
+  return state.settings.roleNames[role] || role;
+}
+
+function renderGameName() {
+  const name = state.settings.gameName || 'President';
+  $('game-title').textContent = name;
+  document.title = name;
+  const startTitle = $('start-title');
+  if (startTitle) startTitle.textContent = name;
+}
+
+console.log('%c[President] ui.js loaded — build 17', 'color:lime;font-weight:bold');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -36,6 +52,7 @@ $('btn-start').addEventListener('click', () => {
     numPlayers:     parseInt($('start-players').value),
     oneTimeAround:  $('start-one-time-around').checked,
     cardTrading:    $('start-card-trading').checked,
+    autoPass:       $('start-auto-pass').checked,
   };
   elModalStart.classList.add('hidden');
   initGame(settings);
@@ -48,28 +65,44 @@ $('btn-new-game').addEventListener('click', () => {
   $('start-players').value          = state.settings.numPlayers;
   $('start-one-time-around').checked = state.settings.oneTimeAround;
   $('start-card-trading').checked    = state.settings.cardTrading;
+  $('start-auto-pass').checked       = state.settings.autoPass;
   elModalStart.classList.remove('hidden');
 });
 
 $('btn-settings').addEventListener('click', () => {
+  $('setting-game-name').value         = state.settings.gameName || 'President';
   $('setting-players').value           = state.settings.numPlayers;
   $('setting-one-time-around').checked = state.settings.oneTimeAround;
   $('setting-card-trading').checked    = state.settings.cardTrading;
+  $('setting-auto-pass').checked       = state.settings.autoPass;
   for (let i = 1; i <= 6; i++) {
     $(`ai-name-${i}`).value = state.settings.aiNames[i - 1] || '';
   }
+  ROLE_KEYS.forEach((key, i) => {
+    $('role-name-' + ROLE_IDS[i]).value = state.settings.roleNames[key] || key;
+  });
   elModalSettings.classList.remove('hidden');
 });
 $('btn-settings-close').addEventListener('click', () => {
+  state.settings.gameName      = $('setting-game-name').value.trim() || 'President';
   state.settings.numPlayers    = parseInt($('setting-players').value);
   state.settings.oneTimeAround = $('setting-one-time-around').checked;
   state.settings.cardTrading   = $('setting-card-trading').checked;
+  state.settings.autoPass      = $('setting-auto-pass').checked;
   for (let i = 1; i <= 6; i++) {
     const val = $(`ai-name-${i}`).value.trim();
     state.settings.aiNames[i - 1] = val || DEFAULT_AI_NAMES[i - 1];
   }
+  ROLE_KEYS.forEach((key, i) => {
+    const val = $('role-name-' + ROLE_IDS[i]).value.trim();
+    state.settings.roleNames[key] = val || key;
+  });
   localStorage.setItem('presidentAiNames', JSON.stringify(state.settings.aiNames));
+  localStorage.setItem('presidentGameName', state.settings.gameName);
+  localStorage.setItem('presidentRoleNames', JSON.stringify(state.settings.roleNames));
   elModalSettings.classList.add('hidden');
+  renderGameName();
+  render();
 });
 
 elBtnPlay.addEventListener('click', () => {
@@ -131,10 +164,19 @@ function renderSeats() {
     const inner = document.createElement('div');
     inner.className = 'seat-inner';
 
+    const nameRow = document.createElement('div');
+    nameRow.style.cssText = 'display:flex;align-items:center;gap:4px;';
+    if (state.pile.length > 0 && state.trickLeader === playerIdx) {
+      const starEl = document.createElement('span');
+      starEl.className = 'trick-leader-star';
+      starEl.textContent = '★';
+      nameRow.appendChild(starEl);
+    }
     const nameEl = document.createElement('div');
     nameEl.className = 'seat-name';
     nameEl.textContent = player.name;
-    inner.appendChild(nameEl);
+    nameRow.appendChild(nameEl);
+    inner.appendChild(nameRow);
 
     if (player.style) {
       const styleEl = document.createElement('div');
@@ -146,7 +188,7 @@ function renderSeats() {
     if (player.role) {
       const roleEl = document.createElement('div');
       roleEl.className = 'seat-role role-badge ' + roleClass(player.role);
-      roleEl.textContent = player.role;
+      roleEl.textContent = displayRoleName(player.role);
       inner.appendChild(roleEl);
     }
 
@@ -243,8 +285,10 @@ function renderPlayerInfo() {
   const human = state.players.find(p => p.isHuman);
   if (!human) return;
   elPlayerName.textContent = 'You';
-  elPlayerRole.textContent = human.role || '';
+  elPlayerRole.textContent = displayRoleName(human.role);
   elPlayerRole.className = 'role-badge ' + roleClass(human.role);
+  const hIdx = state.players.indexOf(human);
+  $('player-trick-star').textContent = (state.pile.length > 0 && state.trickLeader === hIdx) ? '★' : '';
 }
 
 // ── Card element builder ──────────────────────────────────────────────────────
@@ -291,13 +335,30 @@ function toggleSelect(card, el) {
 
 function scheduleAiIfNeeded() {
   if (state.phase !== 'playing') return;
-  if (state.players[state.currentTurn]?.isHuman) return;
+  const cur = state.players[state.currentTurn];
+  if (!cur) return;
+
+  if (cur.isHuman) {
+    if (state.settings.autoPass && state.pile.length > 0 && !hasLegalPlay(cur.hand, state.pile)) {
+      $('auto-pass-msg').classList.remove('hidden');
+      setTimeout(() => {
+        $('auto-pass-msg').classList.add('hidden');
+        const result = humanPass();
+        if (!result.ok) return;
+        selectedCards = [];
+        render();
+        if (state.phase === 'roundEnd') { showRoundEnd(); return; }
+        scheduleAiIfNeeded();
+      }, 1800);
+    }
+    return;
+  }
 
   setTimeout(() => {
     if (state.phase !== 'playing') return;
     if (state.players[state.currentTurn]?.isHuman) return;
     const idx = state.currentTurn;
-    const result = aiTakeTurn(idx);
+    aiTakeTurn(idx);
     render();
     if (state.phase === 'roundEnd') { showRoundEnd(); return; }
     scheduleAiIfNeeded();
@@ -310,7 +371,7 @@ function showRoundEnd() {
   const lines = state.finishOrder.map((playerIdx, i) => {
     const pos = i + 1;
     const p = state.players[playerIdx];
-    return `${pos}${ordinal(pos)}  ${p.name} — ${p.role}`;
+    return `${pos}${ordinal(pos)}  ${p.name} — ${displayRoleName(p.role)}`;
   });
   showToast('Round over! ' + state.players[state.finishOrder[0]].name + ' wins!');
 
@@ -344,17 +405,17 @@ function showTradingModal() {
   let desc  = '';
 
   if (role === 'President') {
-    title = 'Card Trading — You are President';
-    desc  = `You received ${t.tradeCount} card${t.tradeCount > 1 ? 's' : ''} from the Asshole. Select ${t.tradeCount} to give back.`;
+    title = `Card Trading — You are ${displayRoleName('President')}`;
+    desc  = `You received ${t.tradeCount} card${t.tradeCount > 1 ? 's' : ''} from the ${displayRoleName('Asshole')}. Select ${t.tradeCount} to give back.`;
   } else if (role === 'Vice President') {
-    title = 'Card Trading — You are Vice President';
-    desc  = 'You received 1 card from the Vice Asshole. Select 1 card to give back.';
+    title = `Card Trading — You are ${displayRoleName('Vice President')}`;
+    desc  = `You received 1 card from the ${displayRoleName('Vice Asshole')}. Select 1 card to give back.`;
   } else if (role === 'Asshole') {
-    title = 'Card Trading — You are the Asshole';
-    desc  = `Your ${t.tradeCount} best card${t.tradeCount > 1 ? 's were' : ' was'} given to the President. You received:`;
+    title = `Card Trading — You are the ${displayRoleName('Asshole')}`;
+    desc  = `Your ${t.tradeCount} best card${t.tradeCount > 1 ? 's were' : ' was'} given to the ${displayRoleName('President')}. You received:`;
   } else {
-    title = 'Card Trading — You are Vice Asshole';
-    desc  = 'Your best card was given to the Vice President. You received:';
+    title = `Card Trading — You are ${displayRoleName('Vice Asshole')}`;
+    desc  = `Your best card was given to the ${displayRoleName('Vice President')}. You received:`;
   }
 
   $('trading-title').textContent = title;
@@ -423,6 +484,8 @@ function showTradingModal() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+renderGameName();
 
 function roleClass(role) {
   if (!role) return 'role-neutral';

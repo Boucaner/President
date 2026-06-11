@@ -253,13 +253,40 @@ html, body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  position: relative;
 }
+
+#auto-pass-msg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 20, 10, 0.92);
+  border: 1px solid #4ade80;
+  color: #4ade80;
+  padding: 8px 22px;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 600;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
+#auto-pass-msg.hidden { display: none; }
 
 #player-info {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
+.trick-leader-star {
+  color: var(--gold);
+  font-size: .85rem;
+  line-height: 1;
+}
+.trick-leader-star:empty { display: none; }
 
 #player-name {
   font-size: .85rem;
@@ -388,11 +415,22 @@ html, body {
   margin-bottom: 6px;
 }
 
-#ai-names-grid {
+#ai-names-grid, #role-names-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+
+#setting-game-name {
+  background: #2a2a2e;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: .9rem;
+  width: 100%;
+}
+#setting-game-name:focus { outline: none; border-color: var(--gold); }
 
 .name-row {
   flex-direction: row !important;

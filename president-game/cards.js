@@ -36,6 +36,15 @@ function sortHand(hand) {
   });
 }
 
+// Returns true if the player has at least one legal play they can make
+function hasLegalPlay(hand, pile) {
+  if (pile.length === 0) return hand.length > 0;
+  if (hand.some(c => isTrump(c))) return true;
+  const groups = {};
+  hand.forEach(c => { if (!isTrump(c)) { groups[c.value] = groups[c.value] || []; groups[c.value].push(c); } });
+  return Object.values(groups).some(g => g.length >= pile.length && g[0].rank > pile[0].rank);
+}
+
 // Returns true if `cards` is a legal play on top of `pile`
 // pile: array of cards last played (empty = trick opener)
 // cards: proposed play
