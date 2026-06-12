@@ -64,11 +64,13 @@ html, body {
 /* ── Table ────────────────────────────────────────────────── */
 #table {
   flex: 1;
+  min-height: 0;   /* allow grid container to shrink as a flex item */
+  overflow: hidden;
   background: radial-gradient(ellipse at center, var(--green-light) 0%, var(--felt) 60%, #0f2418 100%);
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-rows: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
   /* seats snap to corners/edges; center cell = play area */
 }
 
