@@ -92,6 +92,11 @@
         <input type="checkbox" id="setting-auto-pass" checked>
         <span class="toggle-hint">Automatically passes your turn when you have no legal play</span>
       </label>
+      <label class="toggle-row">
+        Conquest mode
+        <input type="checkbox" id="setting-conquest">
+        <span class="toggle-hint">First to 100 pts wins the campaign — 3+ players only</span>
+      </label>
       <label>
         Card back
         <div class="cb-picker" id="cb-picker-settings">
@@ -135,6 +140,7 @@
       <h2 id="roundend-title">Round Complete</h2>
       <div id="roundend-results" class="roundend-results"></div>
       <div class="modal-actions">
+        <button id="btn-new-conquest" class="action-btn hidden">New Conquest</button>
         <button id="btn-roundend-deal" class="action-btn primary">Deal Next Round</button>
       </div>
     </div>
@@ -188,6 +194,16 @@
           <span>Auto-pass when no play</span>
           <input type="checkbox" id="start-auto-pass" checked>
         </label>
+        <label class="toggle-row" id="start-conquest-label">
+          <span>Conquest mode</span>
+          <input type="checkbox" id="start-conquest">
+        </label>
+        <div id="start-conquest-info" class="conquest-info hidden">First to 100 pts wins — 10 / 5 / 1 / −1 per round</div>
+        <div id="start-resume-section" class="conquest-resume-box hidden">
+          <div class="conquest-resume-label">Saved conquest found</div>
+          <div id="start-resume-players"></div>
+          <button id="btn-resume-conquest" class="action-btn">Resume</button>
+        </div>
         <label>
           Card back
           <div class="cb-picker" id="cb-picker-start">

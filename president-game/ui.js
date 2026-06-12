@@ -53,19 +53,51 @@ $('btn-start').addEventListener('click', () => {
     oneTimeAround:  $('start-one-time-around').checked,
     cardTrading:    $('start-card-trading').checked,
     autoPass:       $('start-auto-pass').checked,
+    conquest:       $('start-conquest').checked,
   };
+  localStorage.setItem('presidentConquest', settings.conquest);
   elModalStart.classList.add('hidden');
-  initGame(settings);
+  initGame(settings);  // no savedConquest → fresh start, clears stored state
   render();
   scheduleAiIfNeeded();
 });
 
+$('btn-resume-conquest').addEventListener('click', () => {
+  const numPlayers = parseInt($('start-players').value);
+  const settings = {
+    numPlayers,
+    oneTimeAround:  $('start-one-time-around').checked,
+    cardTrading:    $('start-card-trading').checked,
+    autoPass:       $('start-auto-pass').checked,
+    conquest:       true,
+  };
+  localStorage.setItem('presidentConquest', 'true');
+  const saved = loadConquestState();
+  elModalStart.classList.add('hidden');
+  initGame(settings, saved);
+  render();
+  scheduleAiIfNeeded();
+});
+
+$('btn-new-conquest').addEventListener('click', () => {
+  $('modal-roundend').classList.add('hidden');
+  clearConquestState();
+  $('start-players').value              = state.settings.numPlayers;
+  $('start-one-time-around').checked    = state.settings.oneTimeAround;
+  $('start-card-trading').checked       = state.settings.cardTrading;
+  $('start-auto-pass').checked          = state.settings.autoPass;
+  $('start-conquest').checked           = state.settings.conquest;
+  updateConquestAvailability();
+  elModalStart.classList.remove('hidden');
+});
+
 $('btn-new-game').addEventListener('click', () => {
-  // Pre-fill start modal with current settings so they persist across games
-  $('start-players').value          = state.settings.numPlayers;
+  $('start-players').value           = state.settings.numPlayers;
   $('start-one-time-around').checked = state.settings.oneTimeAround;
   $('start-card-trading').checked    = state.settings.cardTrading;
   $('start-auto-pass').checked       = state.settings.autoPass;
+  $('start-conquest').checked        = state.settings.conquest;
+  updateConquestAvailability();
   elModalStart.classList.remove('hidden');
 });
 
@@ -75,6 +107,7 @@ $('btn-settings').addEventListener('click', () => {
   $('setting-one-time-around').checked = state.settings.oneTimeAround;
   $('setting-card-trading').checked    = state.settings.cardTrading;
   $('setting-auto-pass').checked       = state.settings.autoPass;
+  $('setting-conquest').checked        = state.settings.conquest;
   for (let i = 1; i <= 6; i++) {
     $(`ai-name-${i}`).value = state.settings.aiNames[i - 1] || '';
   }
@@ -90,6 +123,8 @@ $('btn-settings-close').addEventListener('click', () => {
   state.settings.oneTimeAround = $('setting-one-time-around').checked;
   state.settings.cardTrading   = $('setting-card-trading').checked;
   state.settings.autoPass      = $('setting-auto-pass').checked;
+  state.settings.conquest      = $('setting-conquest').checked;
+  localStorage.setItem('presidentConquest', state.settings.conquest);
   for (let i = 1; i <= 6; i++) {
     const val = $(`ai-name-${i}`).value.trim();
     state.settings.aiNames[i - 1] = val || DEFAULT_AI_NAMES[i - 1];
@@ -369,13 +404,28 @@ function scheduleAiIfNeeded() {
 // ── Round end ─────────────────────────────────────────────────────────────────
 
 function showRoundEnd() {
-  const winner = state.players[state.finishOrder[0]];
-  showToast('Round over! ' + winner.name + ' wins!');
+  const roundWinner = state.players[state.finishOrder[0]];
+  showToast('Round over! ' + roundWinner.name + ' wins!');
+
+  let conquestResult = null;
+  if (state.settings.conquest) conquestResult = scoreRound();
 
   setTimeout(() => {
-    $('roundend-title').textContent = winner.name + ' wins!';
+    const cw = conquestResult?.conquestWinner || null;
+
+    if (cw) {
+      $('roundend-title').textContent = cw.name + ' wins the Conquest!';
+      $('btn-roundend-deal').classList.add('hidden');
+      $('btn-new-conquest').classList.remove('hidden');
+    } else {
+      $('roundend-title').textContent = roundWinner.name + ' wins the round!';
+      $('btn-roundend-deal').classList.remove('hidden');
+      $('btn-new-conquest').classList.add('hidden');
+    }
+
     const resultsEl = $('roundend-results');
     resultsEl.innerHTML = '';
+
     state.finishOrder.forEach((playerIdx, i) => {
       const p = state.players[playerIdx];
       const pos = i + 1;
@@ -398,6 +448,22 @@ function showRoundEnd() {
       row.appendChild(posEl);
       row.appendChild(nameEl);
       row.appendChild(roleEl);
+
+      if (conquestResult) {
+        const delta = conquestResult.deltas[playerIdx];
+
+        const deltaEl = document.createElement('span');
+        deltaEl.className = 'roundend-delta' + (delta > 0 ? ' pos' : delta < 0 ? ' neg' : '');
+        deltaEl.textContent = delta > 0 ? '+' + delta : delta === 0 ? '—' : String(delta);
+
+        const totalEl = document.createElement('span');
+        totalEl.className = 'roundend-total' + (p === cw ? ' conquest-leader' : '');
+        totalEl.textContent = p.scoreTotal;
+
+        row.appendChild(deltaEl);
+        row.appendChild(totalEl);
+      }
+
       resultsEl.appendChild(row);
     });
 
@@ -536,6 +602,52 @@ function setupCardBackPicker(pickerId) {
 setupCardBackPicker('cb-picker-settings');
 setupCardBackPicker('cb-picker-start');
 syncCardBackPickers();
+
+function updateConquestStartUI() {
+  const isConquest = $('start-conquest').checked;
+  $('start-conquest-info').classList.toggle('hidden', !isConquest);
+
+  const resumeSection = $('start-resume-section');
+  if (isConquest) {
+    const numPlayers = parseInt($('start-players').value);
+    const saved = loadConquestState();
+    if (saved && saved.numPlayers === numPlayers) {
+      const playersEl = $('start-resume-players');
+      playersEl.innerHTML = '';
+      const sorted = saved.playerNames.map((name, i) => ({ name, score: saved.scores[i] || 0 }))
+        .sort((a, b) => b.score - a.score);
+      sorted.forEach(({ name, score }) => {
+        const row = document.createElement('div');
+        row.className = 'conquest-resume-row';
+        row.innerHTML = `<span>${name}</span><span class="conquest-resume-score">${score}</span>`;
+        playersEl.appendChild(row);
+      });
+      resumeSection.classList.remove('hidden');
+    } else {
+      resumeSection.classList.add('hidden');
+    }
+  } else {
+    resumeSection.classList.add('hidden');
+  }
+}
+
+function updateConquestAvailability() {
+  const numPlayers = parseInt($('start-players').value);
+  const label = $('start-conquest-label');
+  const cb    = $('start-conquest');
+  const tooFew = numPlayers < 3;
+  cb.disabled = tooFew;
+  label.style.opacity = tooFew ? '0.4' : '';
+  if (tooFew) cb.checked = false;
+  updateConquestStartUI();
+}
+
+$('start-conquest').addEventListener('change', updateConquestStartUI);
+$('start-players').addEventListener('change', updateConquestAvailability);
+
+// Boot: sync conquest toggle and show resume if applicable
+$('start-conquest').checked = state.settings.conquest;
+updateConquestAvailability();
 
 renderGameName();
 

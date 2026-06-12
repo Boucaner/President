@@ -2,6 +2,7 @@
 
 const ROLES = ['President','Vice President','Neutral','Vice Asshole','Asshole'];
 const DEFAULT_AI_NAMES = ['Alice', 'Bob', 'Carlos', 'Diana', 'Eddie', 'Fiona'];
+const CONQUEST_TARGET = 100;
 
 const state = {
   players: [],       // { name, hand, role, finished, isHuman }
@@ -41,6 +42,10 @@ const state = {
       try { const s = localStorage.getItem('presidentCardBack'); if (s) return s; } catch {}
       return 'blue';
     })(),
+    conquest: (() => {
+      try { return localStorage.getItem('presidentConquest') === 'true'; } catch {}
+      return false;
+    })(),
   },
   phase: 'start',    // 'start' | 'trading' | 'playing' | 'roundEnd'
   lastPlay: null,          // { playerName, cards } of most recent play (persists after pile clears)
@@ -50,7 +55,7 @@ const state = {
 
 // ── Setup ──────────────────────────────────────────────────────────────────────
 
-function initGame(settings) {
+function initGame(settings, savedConquest) {
   Object.assign(state.settings, settings);
   const n = state.settings.numPlayers;
 
@@ -58,15 +63,29 @@ function initGame(settings) {
   state.roundNum = 0;
 
   const AI_STYLES = ['conservative', 'neutral', 'aggressive'];
-  const shuffledNames = shuffle([...state.settings.aiNames]).slice(0, n - 1);
 
-  state.players.push({ name: 'You', hand: [], role: null, finished: false, isHuman: true });
-  for (let i = 1; i < n; i++) {
-    state.players.push({
-      name: shuffledNames[i - 1] || DEFAULT_AI_NAMES[i - 1],
-      hand: [], role: null, finished: false, isHuman: false,
-      style: AI_STYLES[Math.floor(Math.random() * AI_STYLES.length)],
-    });
+  if (savedConquest && savedConquest.numPlayers === n) {
+    state.players.push({ name: 'You', hand: [], role: null, finished: false, isHuman: true, scoreTotal: savedConquest.scores[0] || 0 });
+    for (let i = 1; i < n; i++) {
+      state.players.push({
+        name: savedConquest.playerNames[i] || DEFAULT_AI_NAMES[i - 1],
+        hand: [], role: null, finished: false, isHuman: false,
+        style: AI_STYLES[Math.floor(Math.random() * AI_STYLES.length)],
+        scoreTotal: savedConquest.scores[i] || 0,
+      });
+    }
+  } else {
+    clearConquestState();
+    const shuffledNames = shuffle([...state.settings.aiNames]).slice(0, n - 1);
+    state.players.push({ name: 'You', hand: [], role: null, finished: false, isHuman: true, scoreTotal: 0 });
+    for (let i = 1; i < n; i++) {
+      state.players.push({
+        name: shuffledNames[i - 1] || DEFAULT_AI_NAMES[i - 1],
+        hand: [], role: null, finished: false, isHuman: false,
+        style: AI_STYLES[Math.floor(Math.random() * AI_STYLES.length)],
+        scoreTotal: 0,
+      });
+    }
   }
 
   dealRound();
@@ -493,6 +512,54 @@ function aiLead(nonTwoGroups, twos, hand, style) {
   if (byCount.length > 0) return byCount[0];
   if (twos.length > 0) return [twos[0]];
   return [hand[0]];
+}
+
+// ── Conquest scoring ──────────────────────────────────────────────────────────
+
+function scoreRound() {
+  const n = state.players.length;
+  const deltas = new Array(n).fill(0);
+  state.finishOrder.forEach((playerIdx, pos) => {
+    let d = 0;
+    if      (pos === 0)     d = 10;
+    else if (pos === 1)     d = 5;
+    else if (pos === n - 1) d = -1;
+    else if (pos === 2)     d = 1;
+    state.players[playerIdx].scoreTotal = (state.players[playerIdx].scoreTotal || 0) + d;
+    deltas[playerIdx] = d;
+  });
+  saveConquestState();
+  const atTarget = state.players.filter(p => p.scoreTotal >= CONQUEST_TARGET);
+  let conquestWinner = null;
+  if (atTarget.length > 0) {
+    atTarget.sort((a, b) => {
+      if (b.scoreTotal !== a.scoreTotal) return b.scoreTotal - a.scoreTotal;
+      return state.finishOrder.indexOf(state.players.indexOf(a)) - state.finishOrder.indexOf(state.players.indexOf(b));
+    });
+    conquestWinner = atTarget[0];
+  }
+  return { deltas, conquestWinner };
+}
+
+function saveConquestState() {
+  try {
+    localStorage.setItem('presidentConquestState', JSON.stringify({
+      numPlayers: state.players.length,
+      playerNames: state.players.map(p => p.name),
+      scores: state.players.map(p => p.scoreTotal || 0),
+    }));
+  } catch {}
+}
+
+function loadConquestState() {
+  try {
+    const s = localStorage.getItem('presidentConquestState');
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
+}
+
+function clearConquestState() {
+  try { localStorage.removeItem('presidentConquestState'); } catch {}
 }
 
 function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style) {
