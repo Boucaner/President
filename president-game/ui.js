@@ -369,25 +369,52 @@ function scheduleAiIfNeeded() {
 // ── Round end ─────────────────────────────────────────────────────────────────
 
 function showRoundEnd() {
-  const lines = state.finishOrder.map((playerIdx, i) => {
-    const pos = i + 1;
-    const p = state.players[playerIdx];
-    return `${pos}${ordinal(pos)}  ${p.name} — ${displayRoleName(p.role)}`;
-  });
-  showToast('Round over! ' + state.players[state.finishOrder[0]].name + ' wins!');
+  const winner = state.players[state.finishOrder[0]];
+  showToast('Round over! ' + winner.name + ' wins!');
 
   setTimeout(() => {
-    if (confirm('Round complete!\n\n' + lines.join('\n') + '\n\nDeal next round?')) {
-      dealRound();
-      render();
-      if (state.phase === 'trading') {
-        showTradingModal();
-      } else {
-        scheduleAiIfNeeded();
-      }
-    }
+    $('roundend-title').textContent = winner.name + ' wins!';
+    const resultsEl = $('roundend-results');
+    resultsEl.innerHTML = '';
+    state.finishOrder.forEach((playerIdx, i) => {
+      const p = state.players[playerIdx];
+      const pos = i + 1;
+
+      const row = document.createElement('div');
+      row.className = 'roundend-row';
+
+      const posEl = document.createElement('span');
+      posEl.className = 'roundend-pos';
+      posEl.textContent = pos + ordinal(pos);
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'roundend-name';
+      nameEl.textContent = p.name;
+
+      const roleEl = document.createElement('span');
+      roleEl.className = 'role-badge ' + roleClass(p.role);
+      roleEl.textContent = displayRoleName(p.role);
+
+      row.appendChild(posEl);
+      row.appendChild(nameEl);
+      row.appendChild(roleEl);
+      resultsEl.appendChild(row);
+    });
+
+    $('modal-roundend').classList.remove('hidden');
   }, 400);
 }
+
+$('btn-roundend-deal').addEventListener('click', () => {
+  $('modal-roundend').classList.add('hidden');
+  dealRound();
+  render();
+  if (state.phase === 'trading') {
+    showTradingModal();
+  } else {
+    scheduleAiIfNeeded();
+  }
+});
 
 function showTradingModal() {
   const t = state.trading;

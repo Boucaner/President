@@ -553,6 +553,35 @@ html, body {
   line-height: 1.5;
 }
 
+/* ── Round-end results ────────────────────────────────────── */
+.roundend-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.roundend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roundend-pos {
+  font-size: .75rem;
+  color: #666;
+  width: 26px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.roundend-name {
+  flex: 1;
+  font-size: .9rem;
+  font-weight: 600;
+  color: #eee;
+}
+
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .modal-actions button {
   padding: 6px 20px;
