@@ -208,7 +208,9 @@ function renderSeats() {
     }
     const nameEl = document.createElement('div');
     nameEl.className = 'seat-name';
-    nameEl.textContent = player.name;
+    nameEl.textContent = state.settings.conquest
+      ? player.name + ' (' + (player.scoreTotal || 0) + ')'
+      : player.name;
     nameRow.appendChild(nameEl);
     inner.appendChild(nameRow);
 
@@ -318,7 +320,9 @@ function renderActionBar() {
 function renderPlayerInfo() {
   const human = state.players.find(p => p.isHuman);
   if (!human) return;
-  elPlayerName.textContent = 'You';
+  elPlayerName.textContent = state.settings.conquest
+    ? 'You (' + (human.scoreTotal || 0) + ')'
+    : 'You';
   elPlayerRole.textContent = displayRoleName(human.role);
   elPlayerRole.className = 'role-badge ' + roleClass(human.role);
   const hIdx = state.players.indexOf(human);
