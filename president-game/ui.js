@@ -81,6 +81,7 @@ $('btn-settings').addEventListener('click', () => {
   ROLE_KEYS.forEach((key, i) => {
     $('role-name-' + ROLE_IDS[i]).value = state.settings.roleNames[key] || key;
   });
+  syncCardBackPickers();
   elModalSettings.classList.remove('hidden');
 });
 $('btn-settings-close').addEventListener('click', () => {
@@ -199,7 +200,7 @@ function renderSeats() {
       const shown = Math.min(cardCount, 4);
       for (let j = 0; j < shown; j++) {
         const back = document.createElement('div');
-        back.className = 'card-back';
+        back.className = `card-back card-back--${state.settings.cardBack || 'blue'}`;
         if (j === 0) {
           back.classList.add('count-badge');
           back.dataset.count = cardCount;
@@ -484,6 +485,30 @@ function showTradingModal() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function syncCardBackPickers() {
+  const val = state.settings.cardBack || 'blue';
+  document.querySelectorAll('.cb-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.value === val);
+  });
+}
+
+function setupCardBackPicker(pickerId) {
+  const picker = $(pickerId);
+  if (!picker) return;
+  picker.querySelectorAll('.cb-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      state.settings.cardBack = swatch.dataset.value;
+      localStorage.setItem('presidentCardBack', swatch.dataset.value);
+      syncCardBackPickers();
+      render();
+    });
+  });
+}
+
+setupCardBackPicker('cb-picker-settings');
+setupCardBackPicker('cb-picker-start');
+syncCardBackPickers();
 
 renderGameName();
 

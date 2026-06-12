@@ -37,6 +37,10 @@ const state = {
       } catch {}
       return [...DEFAULT_AI_NAMES];
     })(),
+    cardBack: (() => {
+      try { const s = localStorage.getItem('presidentCardBack'); if (s) return s; } catch {}
+      return 'blue';
+    })(),
   },
   phase: 'start',    // 'start' | 'trading' | 'playing' | 'roundEnd'
   lastPlay: null,          // { playerName, cards } of most recent play (persists after pile clears)
