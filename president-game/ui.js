@@ -398,7 +398,7 @@ function showRoundEnd() {
     const cw = conquestResult?.conquestWinner || null;
 
     if (cw) {
-      $('roundend-title').textContent = cw.name + ' wins the Conquest!';
+      $('roundend-title').textContent = cw.isHuman ? 'You win the Conquest!' : cw.name + ' wins the Conquest!';
       $('btn-roundend-deal').classList.add('hidden');
       $('btn-new-conquest').classList.remove('hidden');
     } else {
