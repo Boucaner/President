@@ -55,7 +55,6 @@ $('btn-start').addEventListener('click', () => {
     autoPass:       $('start-auto-pass').checked,
     conquest:       $('start-conquest').checked,
   };
-  localStorage.setItem('presidentConquest', settings.conquest);
   elModalStart.classList.add('hidden');
   initGame(settings);  // no savedConquest → fresh start, clears stored state
   render();
@@ -71,7 +70,6 @@ $('btn-resume-conquest').addEventListener('click', () => {
     autoPass:       $('start-auto-pass').checked,
     conquest:       true,
   };
-  localStorage.setItem('presidentConquest', 'true');
   const saved = loadConquestState();
   elModalStart.classList.add('hidden');
   initGame(settings, saved);
@@ -125,7 +123,6 @@ $('btn-settings-close').addEventListener('click', () => {
   state.settings.cardTrading   = $('setting-card-trading').checked;
   state.settings.autoPass      = $('setting-auto-pass').checked;
   state.settings.conquest      = $('setting-conquest').checked;
-  localStorage.setItem('presidentConquest', state.settings.conquest);
   for (let i = 1; i <= 6; i++) {
     const val = $(`ai-name-${i}`).value.trim();
     state.settings.aiNames[i - 1] = val || DEFAULT_AI_NAMES[i - 1];

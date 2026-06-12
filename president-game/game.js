@@ -42,10 +42,7 @@ const state = {
       try { const s = localStorage.getItem('presidentCardBack'); if (s) return s; } catch {}
       return 'blue';
     })(),
-    conquest: (() => {
-      try { return localStorage.getItem('presidentConquest') === 'true'; } catch {}
-      return false;
-    })(),
+    conquest: false,
   },
   phase: 'start',    // 'start' | 'trading' | 'playing' | 'roundEnd'
   lastPlay: null,          // { playerName, cards } of most recent play (persists after pile clears)
