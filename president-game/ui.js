@@ -61,36 +61,18 @@ $('btn-start').addEventListener('click', () => {
   scheduleAiIfNeeded();
 });
 
-$('btn-resume-conquest').addEventListener('click', () => {
-  const numPlayers = parseInt($('start-players').value);
-  const settings = {
-    numPlayers,
-    oneTimeAround:  $('start-one-time-around').checked,
-    cardTrading:    $('start-card-trading').checked,
-    autoPass:       $('start-auto-pass').checked,
-    conquest:       true,
-  };
-  const saved = loadConquestState();
-  elModalStart.classList.add('hidden');
-  initGame(settings, saved);
-  render();
-  scheduleAiIfNeeded();
-});
-
 $('btn-new-conquest').addEventListener('click', () => {
   $('modal-roundend').classList.add('hidden');
-  clearConquestState();
-  $('start-players').value              = state.settings.numPlayers;
-  $('start-one-time-around').checked    = state.settings.oneTimeAround;
-  $('start-card-trading').checked       = state.settings.cardTrading;
-  $('start-auto-pass').checked          = state.settings.autoPass;
-  $('start-conquest').checked           = state.settings.conquest;
+  $('start-players').value           = state.settings.numPlayers;
+  $('start-one-time-around').checked = state.settings.oneTimeAround;
+  $('start-card-trading').checked    = state.settings.cardTrading;
+  $('start-auto-pass').checked       = state.settings.autoPass;
+  $('start-conquest').checked        = state.settings.conquest;
   updateConquestAvailability();
   elModalStart.classList.remove('hidden');
 });
 
 $('btn-new-game').addEventListener('click', () => {
-  clearConquestState();
   $('start-players').value           = state.settings.numPlayers;
   $('start-one-time-around').checked = state.settings.oneTimeAround;
   $('start-card-trading').checked    = state.settings.cardTrading;
@@ -605,34 +587,6 @@ setupCardBackPicker('cb-picker-settings');
 setupCardBackPicker('cb-picker-start');
 syncCardBackPickers();
 
-function updateConquestStartUI() {
-  const isConquest = $('start-conquest').checked;
-  $('start-conquest-info').classList.toggle('hidden', !isConquest);
-
-  const resumeSection = $('start-resume-section');
-  if (isConquest) {
-    const numPlayers = parseInt($('start-players').value);
-    const saved = loadConquestState();
-    if (saved && saved.numPlayers === numPlayers) {
-      const playersEl = $('start-resume-players');
-      playersEl.innerHTML = '';
-      const sorted = saved.playerNames.map((name, i) => ({ name, score: saved.scores[i] || 0 }))
-        .sort((a, b) => b.score - a.score);
-      sorted.forEach(({ name, score }) => {
-        const row = document.createElement('div');
-        row.className = 'conquest-resume-row';
-        row.innerHTML = `<span>${name}</span><span class="conquest-resume-score">${score}</span>`;
-        playersEl.appendChild(row);
-      });
-      resumeSection.classList.remove('hidden');
-    } else {
-      resumeSection.classList.add('hidden');
-    }
-  } else {
-    resumeSection.classList.add('hidden');
-  }
-}
-
 function updateConquestAvailability() {
   const numPlayers = parseInt($('start-players').value);
   const label = $('start-conquest-label');
@@ -641,10 +595,10 @@ function updateConquestAvailability() {
   cb.disabled = tooFew;
   label.style.opacity = tooFew ? '0.4' : '';
   if (tooFew) cb.checked = false;
-  updateConquestStartUI();
+  $('start-conquest-info').classList.toggle('hidden', !cb.checked);
 }
 
-$('start-conquest').addEventListener('change', updateConquestStartUI);
+$('start-conquest').addEventListener('change', updateConquestAvailability);
 $('start-players').addEventListener('change', updateConquestAvailability);
 
 // Boot: sync conquest toggle and show resume if applicable

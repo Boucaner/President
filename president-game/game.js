@@ -15,6 +15,7 @@ const state = {
   lastPlayedBy: 0,    // index of the player who most recently played a card
   roundNum: 0,
   finishOrder: [],   // player indices in finish order this round
+  roundScored: false,
   settings: {
     numPlayers: 4,
     oneTimeAround: true,
@@ -52,7 +53,7 @@ const state = {
 
 // ── Setup ──────────────────────────────────────────────────────────────────────
 
-function initGame(settings, savedConquest) {
+function initGame(settings) {
   Object.assign(state.settings, settings);
   const n = state.settings.numPlayers;
 
@@ -60,29 +61,16 @@ function initGame(settings, savedConquest) {
   state.roundNum = 0;
 
   const AI_STYLES = ['conservative', 'neutral', 'aggressive'];
+  const shuffledNames = shuffle([...state.settings.aiNames]).slice(0, n - 1);
 
-  if (savedConquest && savedConquest.numPlayers === n) {
-    state.players.push({ name: 'You', hand: [], role: null, finished: false, isHuman: true, scoreTotal: savedConquest.scores[0] || 0 });
-    for (let i = 1; i < n; i++) {
-      state.players.push({
-        name: savedConquest.playerNames[i] || DEFAULT_AI_NAMES[i - 1],
-        hand: [], role: null, finished: false, isHuman: false,
-        style: AI_STYLES[Math.floor(Math.random() * AI_STYLES.length)],
-        scoreTotal: savedConquest.scores[i] || 0,
-      });
-    }
-  } else {
-    clearConquestState();
-    const shuffledNames = shuffle([...state.settings.aiNames]).slice(0, n - 1);
-    state.players.push({ name: 'You', hand: [], role: null, finished: false, isHuman: true, scoreTotal: 0 });
-    for (let i = 1; i < n; i++) {
-      state.players.push({
-        name: shuffledNames[i - 1] || DEFAULT_AI_NAMES[i - 1],
-        hand: [], role: null, finished: false, isHuman: false,
-        style: AI_STYLES[Math.floor(Math.random() * AI_STYLES.length)],
-        scoreTotal: 0,
-      });
-    }
+  state.players.push({ name: 'You', hand: [], role: null, finished: false, isHuman: true, scoreTotal: 0 });
+  for (let i = 1; i < n; i++) {
+    state.players.push({
+      name: shuffledNames[i - 1] || DEFAULT_AI_NAMES[i - 1],
+      hand: [], role: null, finished: false, isHuman: false,
+      style: AI_STYLES[Math.floor(Math.random() * AI_STYLES.length)],
+      scoreTotal: 0,
+    });
   }
 
   dealRound();
@@ -90,6 +78,7 @@ function initGame(settings, savedConquest) {
 
 function dealRound() {
   state.roundNum++;
+  state.roundScored = false;
 
   // Reorder seats before dealing so turn order reflects roles
   if (state.roundNum > 1) reorderSeats();
@@ -514,6 +503,9 @@ function aiLead(nonTwoGroups, twos, hand, style) {
 // ── Conquest scoring ──────────────────────────────────────────────────────────
 
 function scoreRound() {
+  if (state.roundScored) return null;
+  state.roundScored = true;
+
   const n = state.players.length;
   const deltas = new Array(n).fill(0);
   state.finishOrder.forEach((playerIdx, pos) => {
@@ -525,7 +517,6 @@ function scoreRound() {
     state.players[playerIdx].scoreTotal = (state.players[playerIdx].scoreTotal || 0) + d;
     deltas[playerIdx] = d;
   });
-  saveConquestState();
   const atTarget = state.players.filter(p => p.scoreTotal >= CONQUEST_TARGET);
   let conquestWinner = null;
   if (atTarget.length > 0) {
@@ -536,27 +527,6 @@ function scoreRound() {
     conquestWinner = atTarget[0];
   }
   return { deltas, conquestWinner };
-}
-
-function saveConquestState() {
-  try {
-    localStorage.setItem('presidentConquestState', JSON.stringify({
-      numPlayers: state.players.length,
-      playerNames: state.players.map(p => p.name),
-      scores: state.players.map(p => p.scoreTotal || 0),
-    }));
-  } catch {}
-}
-
-function loadConquestState() {
-  try {
-    const s = localStorage.getItem('presidentConquestState');
-    return s ? JSON.parse(s) : null;
-  } catch { return null; }
-}
-
-function clearConquestState() {
-  try { localStorage.removeItem('presidentConquestState'); } catch {}
 }
 
 function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style) {
