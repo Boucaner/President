@@ -128,6 +128,25 @@ html, body {
 }
 .card-back:first-child { margin-left: 0; }
 
+/* Side seats — stack cards vertically */
+#seat-mid-left .seat-cards,
+#seat-mid-right .seat-cards,
+#seat-bot-left .seat-cards {
+  flex-direction: column;
+  gap: 0;
+}
+#seat-mid-left .card-back,
+#seat-mid-right .card-back,
+#seat-bot-left .card-back {
+  margin-left: 0;
+  margin-top: -30px;
+}
+#seat-mid-left .card-back:first-child,
+#seat-mid-right .card-back:first-child,
+#seat-bot-left .card-back:first-child {
+  margin-top: 0;
+}
+
 /* Inner decorative frame */
 .card-back::before {
   content: '';
@@ -618,6 +637,11 @@ html, body {
   #player-zone { padding: 6px 8px 8px; gap: 5px; }
   #player-name { font-size: .75rem; }
   .role-badge { font-size: .6rem; padding: 1px 6px; }
+
+  /* Tighter vertical overlap for small card-backs on side seats */
+  #seat-mid-left .card-back,
+  #seat-mid-right .card-back,
+  #seat-bot-left .card-back { margin-top: -14px; }
 
   /* Hand — remove negative margin so cards wrap cleanly into rows */
   #hand { gap: 4px; }

@@ -16,7 +16,7 @@ const SEAT_LAYOUTS = [
   null,
   ['seat-top-center'],
   ['seat-top-left','seat-top-right'],
-  ['seat-top-left','seat-top-center','seat-top-right'],
+  ['seat-mid-left','seat-top-center','seat-mid-right'],
   ['seat-mid-left','seat-top-left','seat-top-right','seat-mid-right'],
   ['seat-mid-left','seat-top-left','seat-top-center','seat-top-right','seat-mid-right'],
   ['seat-bot-left','seat-mid-left','seat-top-left','seat-top-center','seat-top-right','seat-mid-right'],
