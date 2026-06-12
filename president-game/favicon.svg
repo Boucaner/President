@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="10" fill="#1b4332"/>
+  <!-- Crown body -->
+  <path d="M8,50 L10,30 L22,42 L32,8 L42,42 L54,30 L56,50 Z" fill="#f4d03f"/>
+  <!-- Crown base band -->
+  <rect x="6" y="49" width="52" height="10" rx="3" fill="#f4d03f"/>
+  <!-- Jewels -->
+  <circle cx="32" cy="13" r="4" fill="#c0392b"/>
+  <circle cx="11" cy="31" r="3" fill="#c0392b"/>
+  <circle cx="53" cy="31" r="3" fill="#c0392b"/>
+</svg>
