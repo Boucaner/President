@@ -92,6 +92,7 @@ $('btn-new-conquest').addEventListener('click', () => {
 });
 
 $('btn-new-game').addEventListener('click', () => {
+  clearConquestState();
   $('start-players').value           = state.settings.numPlayers;
   $('start-one-time-around').checked = state.settings.oneTimeAround;
   $('start-card-trading').checked    = state.settings.cardTrading;
