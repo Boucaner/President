@@ -402,7 +402,7 @@ function showRoundEnd() {
       $('btn-roundend-deal').classList.add('hidden');
       $('btn-new-conquest').classList.remove('hidden');
     } else {
-      $('roundend-title').textContent = roundWinner.name + ' wins the round!';
+      $('roundend-title').textContent = roundWinner.isHuman ? 'You win the round!' : roundWinner.name + ' wins the round!';
       $('btn-roundend-deal').classList.remove('hidden');
       $('btn-new-conquest').classList.add('hidden');
     }
