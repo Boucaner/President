@@ -389,7 +389,7 @@ function scheduleAiIfNeeded() {
 
 function showRoundEnd() {
   const roundWinner = state.players[state.finishOrder[0]];
-  showToast('Round over! ' + roundWinner.name + ' wins!');
+  showToast('Round over! ' + (roundWinner.isHuman ? 'You win!' : roundWinner.name + ' wins!'));
 
   let conquestResult = null;
   if (state.settings.conquest) conquestResult = scoreRound();
