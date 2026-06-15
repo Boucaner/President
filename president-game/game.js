@@ -16,6 +16,7 @@ const state = {
   roundNum: 0,
   finishOrder: [],   // player indices in finish order this round
   roundScored: false,
+  valuePlayed: {},   // count of each card value played this round: { '2': 2, 'A': 1, … }
   settings: {
     numPlayers: 4,
     oneTimeAround: true,
@@ -96,6 +97,8 @@ function dealRound() {
   state.trickLog = [];
   state.currentTrickPlays = [];
   state.lastPlay = null;
+  state.valuePlayed = {};
+  state.players.forEach(p => { p.handAssessed = false; p.target = 'middle'; });
 
   // Shuffle and deal evenly — remainder cards are discarded
   let deck = shuffle(buildDeck());
@@ -135,6 +138,43 @@ function humanIdx() {
   return state.players.findIndex(p => p.isHuman);
 }
 
+// ── Hand assessment ────────────────────────────────────────────────────────────
+
+// Scores a hand by high-card strength. Called once per round after dealing + trading.
+function assessHand(hand) {
+  const groups = {};
+  hand.forEach(c => {
+    groups[c.value] = groups[c.value] || [];
+    groups[c.value].push(c);
+  });
+  const twos     = (groups['2'] || []).length;
+  const aces     = (groups['A'] || []).length;
+  const kings    = (groups['K'] || []).length;
+  // Pairs or better of J+ (rank >= 8), excluding 2s
+  const highPairs = Object.values(groups).filter(g =>
+    g[0].rank >= 8 && g[0].value !== '2' && g.length >= 2).length;
+  const score = twos * 5 + aces * 2 + kings * 1.5 + highPairs * 2;
+  return { twos, aces, kings, highPairs, score };
+}
+
+// Sets player.target ('top' | 'middle' | 'survive') based on hand strength and current role.
+// 'top'    — aim to go out 1st or 2nd
+// 'middle' — aim to move up, avoid last
+// 'survive'— weak hand + low position; just try not to be last
+function setPlayerTarget(player) {
+  const m = assessHand(player.hand);
+  player.handMetrics = m;
+  const roleOrder = { 'President': 0, 'Vice President': 1, 'Neutral': 2, 'Vice Asshole': 3, 'Asshole': 4 };
+  const rank = player.role !== null ? (roleOrder[player.role] ?? 2) : 2;
+  if (m.score >= 8) {
+    player.target = 'top';
+  } else if (m.score >= 4) {
+    player.target = rank >= 3 ? 'middle' : 'top'; // VA/Asshole with medium hand aim to move up, not dominate
+  } else {
+    player.target = rank >= 3 ? 'survive' : 'middle'; // weak hand: VA/Asshole just survive; others play safe
+  }
+}
+
 // ── Turn logic ────────────────────────────────────────────────────────────────
 
 function humanPlay(selectedCards) {
@@ -162,6 +202,7 @@ function applyPlay(playerIdx, cards) {
   });
 
   state.pile = cards;
+  cards.forEach(c => { state.valuePlayed[c.value] = (state.valuePlayed[c.value] || 0) + 1; });
   state.trickLeader = playerIdx;
   state.lastPlayedBy = playerIdx;
   state.passCount = 0;
@@ -439,7 +480,13 @@ function aiTakeTurn(playerIdx) {
   if (!player || player.isHuman) return null;
   if (player.finished) { advanceTurn(playerIdx); return null; }
 
-  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral');
+  // Assess hand once per round (after deal + trading are settled)
+  if (!player.handAssessed) {
+    setPlayerTarget(player);
+    player.handAssessed = true;
+  }
+
+  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed);
   if (play) {
     applyPlay(playerIdx, play);
     return { action: 'play', cards: play };
@@ -449,7 +496,7 @@ function aiTakeTurn(playerIdx) {
   }
 }
 
-function aiChoosePlay(hand, pile, style) {
+function aiChoosePlay(hand, pile, style, target, valuePlayed) {
   const pileCount = pile.length;
   const pileRank  = pileCount > 0 ? pile[0].rank : -1;
 
@@ -461,41 +508,70 @@ function aiChoosePlay(hand, pile, style) {
 
   const nonTwoGroups = Object.values(groups)
     .filter(g => g[0].value !== '2')
-    .sort((a, b) => a[0].rank - b[0].rank);  // ascending rank
+    .sort((a, b) => a[0].rank - b[0].rank);
 
   const twos = groups['2'] || [];
 
+  // If I hold all remaining unplayed 2s, my Aces are unbeatable
+  const twosPlayed  = valuePlayed['2'] || 0;
+  const iHoldAllTwos = twos.length > 0 && twos.length >= (4 - twosPlayed);
+
   return pileCount === 0
-    ? aiLead(nonTwoGroups, twos, hand, style)
-    : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style);
+    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos)
+    : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed);
 }
 
-function aiLead(nonTwoGroups, twos, hand, style) {
-  // Universal: if only 2s remain, lead them all at once
+function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos) {
+  // Universal: only 2s remain — lead them all
   if (nonTwoGroups.length === 0 && twos.length > 0) return twos;
 
-  // Universal: exactly 2 cards, one is a 2 — lead the 2 first, guaranteed win,
-  // then last card plays out regardless (going out can't be stopped once last card is played)
-  if (hand.length === 2 && twos.length > 0 && nonTwoGroups.length > 0) {
-    return [twos[0]];
-  }
+  // Universal: exactly 2 cards left and one is a 2 — lead the 2 first; last card then plays uncontested
+  if (hand.length === 2 && twos.length > 0 && nonTwoGroups.length > 0) return [twos[0]];
 
-  if (style === 'conservative' || style === 'neutral') {
-    // Endgame: ≤ 4 cards with a 2 — lead highest non-trump first, keeping 2 as insurance
-    if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0) {
-      return nonTwoGroups[nonTwoGroups.length - 1];
+  if (target === 'top') {
+    // If holding all remaining 2s, Aces can't be beaten — lead Ace to shed it safely in endgame
+    if (iHoldAllTwos && hand.length <= 5) {
+      const aceGroup = nonTwoGroups.find(g => g[0].value === 'A');
+      if (aceGroup) return [aceGroup[0]];
     }
-    // Lead lowest complete group — clears cheap cards, sets achievable pile count
-    if (nonTwoGroups.length > 0) return nonTwoGroups[0];
+    if (style === 'aggressive') {
+      // Lead largest group of cheapest cards — empty hand fast
+      const byCount = [...nonTwoGroups].sort((a, b) =>
+        b.length !== a.length ? b.length - a.length : a[0].rank - b[0].rank);
+      if (byCount.length > 0) return byCount[0];
+    } else {
+      // Endgame: ≤ 4 cards with a 2 — lead highest non-trump, keep 2 as finisher
+      if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
+        return nonTwoGroups[nonTwoGroups.length - 1];
+      if (nonTwoGroups.length > 0) return nonTwoGroups[0];
+    }
     if (twos.length > 0) return [twos[0]];
     return [hand[0]];
   }
 
-  // aggressive: lead cheapest group of maximum count
-  // biggest count > lowest rank within that count — clears hand fast, doesn't waste premium cards
-  const byCount = [...nonTwoGroups].sort((a, b) =>
-    b.length !== a.length ? b.length - a.length : a[0].rank - b[0].rank);
-  if (byCount.length > 0) return byCount[0];
+  if (target === 'survive') {
+    // Lead lowest single card — shed junk, preserve pairs/triples for reactive play
+    const singles = nonTwoGroups.filter(g => g.length === 1);
+    if (singles.length > 0) return [singles[0][0]];
+    // No singles — reluctantly lead lowest card from smallest group (don't break big groups)
+    const bySize = [...nonTwoGroups].sort((a, b) => a.length - b.length || a[0].rank - b[0].rank);
+    if (bySize.length > 0) return [bySize[0][0]];
+    if (twos.length > 0) return [twos[0]];
+    return [hand[0]];
+  }
+
+  // Target = 'middle'
+  if (style === 'aggressive') {
+    const byCount = [...nonTwoGroups].sort((a, b) =>
+      b.length !== a.length ? b.length - a.length : a[0].rank - b[0].rank);
+    if (byCount.length > 0) return byCount[0];
+    if (twos.length > 0) return [twos[0]];
+    return [hand[0]];
+  }
+  // conservative / neutral, middle: lead lowest group; use 2 as endgame insurance
+  if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
+    return nonTwoGroups[nonTwoGroups.length - 1];
+  if (nonTwoGroups.length > 0) return nonTwoGroups[0];
   if (twos.length > 0) return [twos[0]];
   return [hand[0]];
 }
@@ -529,29 +605,79 @@ function scoreRound() {
   return { deltas, conquestWinner };
 }
 
-function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style) {
-  // Non-trump cards that can beat the pile at matching count
+function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed) {
   const beaters = nonTwoGroups
     .filter(g => g.length >= pileCount && g[0].rank > pileRank)
-    .sort((a, b) => a[0].rank - b[0].rank);  // ascending
+    .sort((a, b) => a[0].rank - b[0].rank);
 
-  if (style === 'conservative') {
-    // Lowest beater; burns 2 only on Q+ piles — more selective than neutral, less than aggressive
-    if (beaters.length > 0) return beaters[0].slice(0, pileCount);
-    if (twos.length > 0 && pileRank >= 9) return [twos[0]];
-    return null;
+  const handSize    = hand.length;
+  const lowestBeater = beaters[0] || null;
+  const playRank    = lowestBeater ? lowestBeater[0].rank : -1;
+
+  // Non-trump cards strictly higher than our proposed play (backup cards)
+  const higherAfter = lowestBeater
+    ? hand.filter(c => c.value !== '2' && c.rank > playRank).length
+    : 0;
+
+  // 2s still in opponents' hands (unplayed and not in my hand)
+  const twosStillOut = (4 - (valuePlayed['2'] || 0)) - twos.length;
+
+  // ── Universal go-out checks ────────────────────────────────────────────────
+  // Playing these cards empties our hand entirely — always take it
+  if (lowestBeater && handSize === pileCount) return lowestBeater.slice(0, pileCount);
+  // All remaining cards are 2s — play them out
+  if (!lowestBeater && twos.length > 0 && twos.length === handSize) {
+    if (twos.length === pileCount) return twos;
+    if (twos.length === 1) return [twos[0]]; // single 2 is always legal
   }
 
-  if (style === 'neutral') {
-    // Lowest beater; 2 as last resort when truly stuck
-    if (beaters.length > 0) return beaters[0].slice(0, pileCount);
+  // ── Target: 'top' — go out as fast as possible ─────────────────────────────
+  if (target === 'top') {
+    if (lowestBeater) return lowestBeater.slice(0, pileCount);
     if (twos.length > 0) return [twos[0]];
     return null;
   }
 
-  // aggressive: lowest beater to preserve high cards for leading;
-  // burn 2 on any pile of 10 or higher (rank 7) — worth it to take control
-  if (beaters.length > 0) return beaters[0].slice(0, pileCount);
-  if (twos.length > 0 && pileRank >= 7) return [twos[0]];
+  // ── Target: 'survive' — play selectively; save high cards for later ─────────
+  if (target === 'survive') {
+    if (!lowestBeater) {
+      // No non-trump beater; use 2 only on very high piles
+      const twoEmergencyRank = style === 'conservative' ? 11 : 10; // A only / K+
+      if (twos.length > 0 && pileRank >= twoEmergencyRank) return [twos[0]];
+      return null;
+    }
+    // Play only when cost is low: cheap card AND have something better in reserve
+    // If no 2s remain in opponents' hands, raise the threshold (high cards are safer)
+    const baseThreshold = style === 'conservative' ? 6   // ≤ 9  (rank 0-6)
+                        : style === 'neutral'       ? 8   // ≤ J  (rank 0-8)
+                        :                            9;   // ≤ Q  (rank 0-9)
+    const threshold = twosStillOut === 0 ? Math.max(baseThreshold, 11) : baseThreshold;
+    if (playRank <= threshold && higherAfter >= 1) return lowestBeater.slice(0, pileCount);
+    // Fall back to 2 only on high piles
+    const twoThreshold = style === 'conservative' ? 11  // A pile
+                       : style === 'neutral'       ? 10  // K+
+                       :                            9;   // Q+
+    if (twos.length > 0 && pileRank >= twoThreshold) return [twos[0]];
+    return null;
+  }
+
+  // ── Target: 'middle' — balanced; minor refinements per style ───────────────
+  if (style === 'conservative') {
+    if (lowestBeater) {
+      // Don't sacrifice our only King or Ace when we have nothing else and won't go out
+      if (playRank >= 10 && higherAfter === 0 && handSize > pileCount + 1) return null;
+      return lowestBeater.slice(0, pileCount);
+    }
+    if (twos.length > 0 && pileRank >= 9) return [twos[0]]; // Q+
+    return null;
+  }
+  if (style === 'neutral') {
+    if (lowestBeater) return lowestBeater.slice(0, pileCount);
+    if (twos.length > 0) return [twos[0]];
+    return null;
+  }
+  // aggressive + middle
+  if (lowestBeater) return lowestBeater.slice(0, pileCount);
+  if (twos.length > 0 && pileRank >= 7) return [twos[0]]; // 10+
   return null;
 }
