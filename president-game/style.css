@@ -83,6 +83,7 @@ html, body {
   justify-content: center;
   padding: 8px;
   gap: 4px;
+  overflow: hidden;
 }
 
 .seat-inner {
