@@ -196,7 +196,7 @@ function renderSeats() {
     nameRow.appendChild(nameEl);
     inner.appendChild(nameRow);
 
-    if (player.style) {
+    if (player.style && seatId !== 'seat-mid-left' && seatId !== 'seat-mid-right' && seatId !== 'seat-bot-left') {
       const styleEl = document.createElement('div');
       styleEl.className = 'seat-style seat-style-' + player.style;
       styleEl.textContent = player.style;
@@ -211,29 +211,46 @@ function renderSeats() {
     }
 
     const cardCount = player.hand.length;
-    if (cardCount > 0) {
-      const cardsEl = document.createElement('div');
-      cardsEl.className = 'seat-cards';
-      const isSideSeat = seatId === 'seat-mid-left' || seatId === 'seat-mid-right' || seatId === 'seat-bot-left';
-      const shown = Math.min(cardCount, isSideSeat ? 1 : 4);
-      for (let j = 0; j < shown; j++) {
-        const back = document.createElement('div');
-        back.className = `card-back card-back--${state.settings.cardBack || 'blue'}`;
-        if (j === 0) {
-          back.classList.add('count-badge');
-          back.dataset.count = cardCount;
-        }
-        cardsEl.appendChild(back);
-      }
-      inner.appendChild(cardsEl);
-    } else if (player.finished) {
-      const done = document.createElement('div');
-      done.style.cssText = 'font-size:.7rem;color:#4ade80;letter-spacing:1px';
-      done.textContent = '✓ Done';
-      inner.appendChild(done);
-    }
+    const isSideSeat = seatId === 'seat-mid-left' || seatId === 'seat-mid-right' || seatId === 'seat-bot-left';
 
-    el.appendChild(inner);
+    if (isSideSeat) {
+      // Side seats: info block and card-back are sibling children of the seat so
+      // the name is always visible regardless of card-back height.
+      el.appendChild(inner);
+      if (cardCount > 0) {
+        const back = document.createElement('div');
+        back.className = `card-back card-back--${state.settings.cardBack || 'blue'} count-badge`;
+        back.dataset.count = cardCount;
+        el.appendChild(back);
+      } else if (player.finished) {
+        const done = document.createElement('div');
+        done.style.cssText = 'font-size:.7rem;color:#4ade80;letter-spacing:1px';
+        done.textContent = '✓ Done';
+        el.appendChild(done);
+      }
+    } else {
+      if (cardCount > 0) {
+        const cardsEl = document.createElement('div');
+        cardsEl.className = 'seat-cards';
+        const shown = Math.min(cardCount, 4);
+        for (let j = 0; j < shown; j++) {
+          const back = document.createElement('div');
+          back.className = `card-back card-back--${state.settings.cardBack || 'blue'}`;
+          if (j === 0) {
+            back.classList.add('count-badge');
+            back.dataset.count = cardCount;
+          }
+          cardsEl.appendChild(back);
+        }
+        inner.appendChild(cardsEl);
+      } else if (player.finished) {
+        const done = document.createElement('div');
+        done.style.cssText = 'font-size:.7rem;color:#4ade80;letter-spacing:1px';
+        done.textContent = '✓ Done';
+        inner.appendChild(done);
+      }
+      el.appendChild(inner);
+    }
   }
 }
 

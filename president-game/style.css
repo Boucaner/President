@@ -133,11 +133,19 @@ html, body {
 }
 .card-back:first-child { margin-left: 0; }
 
-/* Side seats — anchor content to top so the name is always visible */
+/* Side seats — anchor to top; card-back is a sibling of seat-inner, not nested */
 #seat-mid-left,
 #seat-mid-right,
 #seat-bot-left {
   justify-content: flex-start;
+}
+
+/* Reset margins on the single card-back that sits directly inside the seat */
+#seat-mid-left > .card-back,
+#seat-mid-right > .card-back,
+#seat-bot-left > .card-back {
+  margin-top: 0;
+  margin-left: 0;
 }
 
 /* Side seats — stack cards vertically */
