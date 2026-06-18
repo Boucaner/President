@@ -84,6 +84,7 @@ html, body {
   padding: 8px;
   gap: 4px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .seat-inner {

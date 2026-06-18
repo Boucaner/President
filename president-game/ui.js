@@ -214,7 +214,8 @@ function renderSeats() {
     if (cardCount > 0) {
       const cardsEl = document.createElement('div');
       cardsEl.className = 'seat-cards';
-      const shown = Math.min(cardCount, 4);
+      const isSideSeat = seatId === 'seat-mid-left' || seatId === 'seat-mid-right' || seatId === 'seat-bot-left';
+      const shown = Math.min(cardCount, isSideSeat ? 1 : 4);
       for (let j = 0; j < shown; j++) {
         const back = document.createElement('div');
         back.className = `card-back card-back--${state.settings.cardBack || 'blue'}`;
