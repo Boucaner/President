@@ -132,6 +132,13 @@ html, body {
 }
 .card-back:first-child { margin-left: 0; }
 
+/* Side seats — anchor content to top so the name is always visible */
+#seat-mid-left,
+#seat-mid-right,
+#seat-bot-left {
+  justify-content: flex-start;
+}
+
 /* Side seats — stack cards vertically */
 #seat-mid-left .seat-cards,
 #seat-mid-right .seat-cards,
