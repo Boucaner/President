@@ -140,12 +140,19 @@ html, body {
   justify-content: flex-start;
 }
 
-/* Reset margins on the single card-back that sits directly inside the seat */
+/* First card-back directly in side seat: no margin */
 #seat-mid-left > .card-back,
 #seat-mid-right > .card-back,
 #seat-bot-left > .card-back {
   margin-top: 0;
   margin-left: 0;
+}
+
+/* Subsequent card-backs overlap the one above */
+#seat-mid-left > .card-back ~ .card-back,
+#seat-mid-right > .card-back ~ .card-back,
+#seat-bot-left > .card-back ~ .card-back {
+  margin-top: -30px;
 }
 
 

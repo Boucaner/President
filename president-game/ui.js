@@ -214,14 +214,20 @@ function renderSeats() {
     const isSideSeat = seatId === 'seat-mid-left' || seatId === 'seat-mid-right' || seatId === 'seat-bot-left';
 
     if (isSideSeat) {
-      // Side seats: info block and card-back are sibling children of the seat so
+      // Side seats: info block and card-backs are sibling children of the seat so
       // the name is always visible regardless of card-back height.
       el.appendChild(inner);
       if (cardCount > 0) {
-        const back = document.createElement('div');
-        back.className = `card-back card-back--${state.settings.cardBack || 'blue'} count-badge`;
-        back.dataset.count = cardCount;
-        el.appendChild(back);
+        const shown = Math.min(cardCount, 3);
+        for (let j = 0; j < shown; j++) {
+          const back = document.createElement('div');
+          back.className = `card-back card-back--${state.settings.cardBack || 'blue'}`;
+          if (j === 0) {
+            back.classList.add('count-badge');
+            back.dataset.count = cardCount;
+          }
+          el.appendChild(back);
+        }
       } else if (player.finished) {
         const done = document.createElement('div');
         done.style.cssText = 'font-size:.7rem;color:#4ade80;letter-spacing:1px';
