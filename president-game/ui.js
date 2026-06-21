@@ -43,7 +43,7 @@ function renderGameName() {
   if (startTitle) startTitle.textContent = name;
 }
 
-console.log('%c[President] ui.js loaded — build 17', 'color:lime;font-weight:bold');
+console.log('%c[President] ui.js loaded — build 18', 'color:lime;font-weight:bold');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -233,6 +233,13 @@ function renderSeats() {
         done.style.cssText = 'font-size:.7rem;color:#4ade80;letter-spacing:1px';
         done.textContent = '✓ Done';
         el.appendChild(done);
+      }
+      // Style badge goes after cards so it isn't covered
+      if (player.style) {
+        const styleEl = document.createElement('div');
+        styleEl.className = 'seat-style seat-style-' + player.style;
+        styleEl.textContent = player.style;
+        el.appendChild(styleEl);
       }
     } else {
       if (cardCount > 0) {
