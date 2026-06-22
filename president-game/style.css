@@ -540,7 +540,9 @@ html, body {
 }
 
 #trading-received-cards,
-#trading-give-cards {
+#trading-give-cards,
+#kitty-cards,
+#kitty-hand-cards {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -548,10 +550,18 @@ html, body {
 
 #trading-give-cards .card { cursor: pointer; }
 
-#modal-trading .modal-box {
+#modal-trading .modal-box,
+#modal-kitty .modal-box {
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+#kitty-swap-info {
+  text-align: center;
+  font-size: .8rem;
+  color: #888;
+  min-height: 1.2em;
 }
 
 #trading-desc {

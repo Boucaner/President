@@ -43,7 +43,7 @@ function renderGameName() {
   if (startTitle) startTitle.textContent = name;
 }
 
-console.log('%c[President] ui.js loaded — build 18', 'color:lime;font-weight:bold');
+console.log('%c[President] ui.js loaded — build 19', 'color:lime;font-weight:bold');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -54,6 +54,7 @@ $('btn-start').addEventListener('click', () => {
     cardTrading:    $('start-card-trading').checked,
     autoPass:       $('start-auto-pass').checked,
     conquest:       $('start-conquest').checked,
+    kittyExchange:  $('start-kitty-exchange').checked,
   };
   elModalStart.classList.add('hidden');
   initGame(settings);  // no savedConquest → fresh start, clears stored state
@@ -89,6 +90,7 @@ $('btn-settings').addEventListener('click', () => {
   $('setting-card-trading').checked    = state.settings.cardTrading;
   $('setting-auto-pass').checked       = state.settings.autoPass;
   $('setting-conquest').checked        = state.settings.conquest;
+  $('setting-kitty-exchange').checked  = state.settings.kittyExchange;
   for (let i = 1; i <= 6; i++) {
     $(`ai-name-${i}`).value = state.settings.aiNames[i - 1] || '';
   }
@@ -105,6 +107,7 @@ $('btn-settings-close').addEventListener('click', () => {
   state.settings.cardTrading   = $('setting-card-trading').checked;
   state.settings.autoPass      = $('setting-auto-pass').checked;
   state.settings.conquest      = $('setting-conquest').checked;
+  state.settings.kittyExchange = $('setting-kitty-exchange').checked;
   for (let i = 1; i <= 6; i++) {
     const val = $(`ai-name-${i}`).value.trim();
     state.settings.aiNames[i - 1] = val || DEFAULT_AI_NAMES[i - 1];
@@ -490,12 +493,86 @@ $('btn-roundend-deal').addEventListener('click', () => {
   $('modal-roundend').classList.add('hidden');
   dealRound();
   render();
-  if (state.phase === 'trading') {
+  if (state.phase === 'kittyExchange') {
+    showKittyExchangeModal();
+  } else if (state.phase === 'trading') {
     showTradingModal();
   } else {
     scheduleAiIfNeeded();
   }
 });
+
+function showKittyExchangeModal() {
+  const kx = state.kittyExchange;
+  const hIdx = humanIdx();
+  const human = state.players[hIdx];
+  let kittySelected = [];
+  let handSelected  = [];
+
+  const updateBtn = () => {
+    const n = kittySelected.length;
+    const canSwap = n > 0 && n === handSelected.length;
+    $('btn-kitty-swap').disabled    = !canSwap;
+    $('btn-kitty-swap').textContent = canSwap ? `Swap ${n}↔${n}` : 'Swap';
+    const mismatch = (kittySelected.length !== handSelected.length) &&
+                     (kittySelected.length > 0 || handSelected.length > 0);
+    $('kitty-swap-info').textContent = mismatch
+      ? `Select equal numbers from each (${kittySelected.length} extra, ${handSelected.length} hand)`
+      : '';
+  };
+
+  $('kitty-title').textContent = 'Extra Cards';
+  $('kitty-desc').textContent  =
+    `There ${kx.kitty.length === 1 ? 'is' : 'are'} ${kx.kitty.length} undealt card${kx.kitty.length !== 1 ? 's' : ''}. ` +
+    'You may swap any of yours for any in the pile, or keep your hand as-is.';
+
+  const kittyEl = $('kitty-cards');
+  kittyEl.innerHTML = '';
+  kx.kitty.forEach(card => {
+    const el = buildCardEl(card, true);
+    el.addEventListener('click', () => {
+      const i = kittySelected.findIndex(c => c.suit === card.suit && c.value === card.value);
+      if (i === -1) { kittySelected.push(card); el.classList.add('selected'); }
+      else          { kittySelected.splice(i, 1); el.classList.remove('selected'); }
+      updateBtn();
+    });
+    kittyEl.appendChild(el);
+  });
+
+  const handEl = $('kitty-hand-cards');
+  handEl.innerHTML = '';
+  human.hand.forEach(card => {
+    const el = buildCardEl(card, true);
+    el.addEventListener('click', () => {
+      const i = handSelected.findIndex(c => c.suit === card.suit && c.value === card.value);
+      if (i === -1) { handSelected.push(card); el.classList.add('selected'); }
+      else          { handSelected.splice(i, 1); el.classList.remove('selected'); }
+      updateBtn();
+    });
+    handEl.appendChild(el);
+  });
+
+  updateBtn();
+
+  const afterExchange = () => {
+    $('modal-kitty').classList.add('hidden');
+    if (state.phase === 'kittyExchange') {
+      showKittyExchangeModal();
+    } else if (state.phase === 'trading') {
+      showTradingModal();
+    } else {
+      render();
+      scheduleAiIfNeeded();
+    }
+  };
+
+  $('btn-kitty-skip').onclick = () => { humanCompleteKittyExchange([], []); afterExchange(); };
+  $('btn-kitty-swap').onclick = () => {
+    if (humanCompleteKittyExchange(kittySelected, handSelected)) afterExchange();
+  };
+
+  $('modal-kitty').classList.remove('hidden');
+}
 
 function showTradingModal() {
   const t = state.trading;

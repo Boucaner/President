@@ -45,8 +45,10 @@ const state = {
       return 'blue';
     })(),
     conquest: false,
+    kittyExchange: false,
   },
-  phase: 'start',    // 'start' | 'trading' | 'playing' | 'roundEnd'
+  phase: 'start',    // 'start' | 'kittyExchange' | 'trading' | 'playing' | 'roundEnd'
+  kitty: [],
   lastPlay: null,          // { playerName, cards } of most recent play (persists after pile clears)
   trickLog: [],            // completed tricks this round: [{ plays:[{playerName,cards}], winnerName }]
   currentTrickPlays: [],   // plays accumulated in the current trick
@@ -100,9 +102,10 @@ function dealRound() {
   state.valuePlayed = {};
   state.players.forEach(p => { p.handAssessed = false; p.target = 'middle'; });
 
-  // Shuffle and deal evenly — remainder cards are discarded
+  // Shuffle and deal evenly — save remainder as kitty
   let deck = shuffle(buildDeck());
   const cardsEach = Math.floor(deck.length / n);
+  state.kitty = deck.slice(cardsEach * n);
   deck.slice(0, cardsEach * n).forEach((card, i) => {
     state.players[i % n].hand.push(card);
   });
@@ -113,7 +116,7 @@ function dealRound() {
   state.currentTurn = firstPlayer;
   state.trickLeader = firstPlayer;
 
-  startTrading();
+  startKittyExchange();
 }
 
 function reorderSeats() {
@@ -357,6 +360,76 @@ function assignRoles() {
 
 function tradingCount() {
   return state.players.length <= 4 ? 2 : 1;
+}
+
+function startKittyExchange() {
+  if (!state.settings.kittyExchange || state.roundNum <= 1 || !state.kitty.length) {
+    startTrading();
+    return;
+  }
+  state.kittyExchange = {
+    kitty: [...state.kitty],
+    playerOrder: state.players.map((_, i) => i),
+    currentStep: 0,
+  };
+  state.phase = 'kittyExchange';
+  advanceKittyExchange();
+}
+
+function advanceKittyExchange() {
+  const kx = state.kittyExchange;
+  while (kx.currentStep < kx.playerOrder.length) {
+    const playerIdx = kx.playerOrder[kx.currentStep];
+    if (state.players[playerIdx].isHuman) return;
+    aiDoKittyExchange(playerIdx);
+    kx.currentStep++;
+  }
+  startTrading();
+}
+
+function aiDoKittyExchange(playerIdx) {
+  const kx = state.kittyExchange;
+  const player = state.players[playerIdx];
+  const sortedKitty = [...kx.kitty].sort((a, b) => b.rank - a.rank);
+  const sortedHand  = [...player.hand].sort((a, b) => a.rank - b.rank);
+  const give = [], take = [];
+  for (let i = 0; i < sortedKitty.length && i < sortedHand.length; i++) {
+    if (sortedKitty[i].rank > sortedHand[i].rank) {
+      take.push(sortedKitty[i]);
+      give.push(sortedHand[i]);
+    } else break;
+  }
+  take.forEach(c => {
+    const i = kx.kitty.findIndex(k => k.suit === c.suit && k.value === c.value);
+    if (i !== -1) kx.kitty.splice(i, 1);
+    player.hand.push(c);
+  });
+  give.forEach(c => {
+    const i = player.hand.findIndex(h => h.suit === c.suit && h.value === c.value);
+    if (i !== -1) player.hand.splice(i, 1);
+    kx.kitty.push(c);
+  });
+  player.hand = sortHand(player.hand);
+}
+
+function humanCompleteKittyExchange(takeCards, giveCards) {
+  if (takeCards.length !== giveCards.length) return false;
+  const kx = state.kittyExchange;
+  const hIdx = humanIdx();
+  takeCards.forEach(c => {
+    const i = kx.kitty.findIndex(k => k.suit === c.suit && k.value === c.value);
+    if (i !== -1) kx.kitty.splice(i, 1);
+    state.players[hIdx].hand.push(c);
+  });
+  giveCards.forEach(c => {
+    const i = state.players[hIdx].hand.findIndex(h => h.suit === c.suit && h.value === c.value);
+    if (i !== -1) state.players[hIdx].hand.splice(i, 1);
+    kx.kitty.push(c);
+  });
+  state.players[hIdx].hand = sortHand(state.players[hIdx].hand);
+  kx.currentStep++;
+  advanceKittyExchange();
+  return true;
 }
 
 function startTrading() {
