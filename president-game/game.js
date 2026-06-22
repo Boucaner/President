@@ -182,6 +182,11 @@ function assessHand(hand) {
 function setPlayerTarget(player) {
   const m = assessHand(player.hand);
   player.handMetrics = m;
+  // 2-player: no "survive" or "middle" — always play to win, every round
+  if (state.players.length === 2) {
+    player.target = 'top';
+    return;
+  }
   const roleOrder = { 'President': 0, 'Vice President': 1, 'Neutral': 2, 'Vice Wiper': 3, 'Wiper': 4 };
   const rank = player.role !== null ? (roleOrder[player.role] ?? 2) : 2;
   if (m.score >= 8) {
@@ -622,7 +627,8 @@ function aiTakeTurn(playerIdx) {
     player.handAssessed = true;
   }
 
-  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed);
+  const opp = state.players.length === 2 ? state.players.find(p => p !== player) : null;
+  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed, opp ? opp.hand.length : undefined);
   if (play) {
     applyPlay(playerIdx, play);
     return { action: 'play', cards: play };
@@ -632,7 +638,7 @@ function aiTakeTurn(playerIdx) {
   }
 }
 
-function aiChoosePlay(hand, pile, style, target, valuePlayed) {
+function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize) {
   const pileCount = pile.length;
   const pileRank  = pileCount > 0 ? pile[0].rank : -1;
 
@@ -653,11 +659,11 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed) {
   const iHoldAllTwos = twos.length > 0 && twos.length >= (4 - twosPlayed);
 
   return pileCount === 0
-    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos)
+    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize)
     : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed);
 }
 
-function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos) {
+function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize) {
   // Universal: only 2s remain — lead them all
   if (nonTwoGroups.length === 0 && twos.length > 0) return twos;
 
@@ -670,13 +676,25 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos) {
       const aceGroup = nonTwoGroups.find(g => g[0].value === 'A');
       if (aceGroup) return [aceGroup[0]];
     }
-    if (style === 'aggressive') {
-      // Lead largest group of cheapest cards — empty hand fast
+    if (oppHandSize !== undefined) {
+      // 2-player: unified strategy for all styles — takes priority over style logic
+      // Endgame: ≤ 4 cards with a 2 — lead highest non-trump, keep 2 as finisher
+      if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
+        return nonTwoGroups[nonTwoGroups.length - 1];
+      // Pressure: opponent 3 cards or fewer — lead high single to deny their exit
+      if (oppHandSize <= 3 && nonTwoGroups.length > 0)
+        return [nonTwoGroups[nonTwoGroups.length - 1][0]];
+      // Normal: lead biggest group at lowest rank — forces count-matching, empties hand fast
+      const byCount2P = [...nonTwoGroups].sort((a, b) =>
+        b.length !== a.length ? b.length - a.length : a[0].rank - b[0].rank);
+      if (byCount2P.length > 0) return byCount2P[0];
+    } else if (style === 'aggressive') {
+      // 4+ player aggressive: lead largest group of cheapest cards — empty hand fast
       const byCount = [...nonTwoGroups].sort((a, b) =>
         b.length !== a.length ? b.length - a.length : a[0].rank - b[0].rank);
       if (byCount.length > 0) return byCount[0];
     } else {
-      // Endgame: ≤ 4 cards with a 2 — lead highest non-trump, keep 2 as finisher
+      // 4+ player conservative/neutral: endgame then lead lowest
       if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
         return nonTwoGroups[nonTwoGroups.length - 1];
       if (nonTwoGroups.length > 0) return nonTwoGroups[0];
