@@ -102,6 +102,13 @@ $('btn-settings').addEventListener('click', () => {
   syncCardBackPickers();
   elModalSettings.classList.remove('hidden');
 });
+$('btn-rules').addEventListener('click', () => {
+  $('modal-rules').classList.remove('hidden');
+});
+$('btn-rules-close').addEventListener('click', () => {
+  $('modal-rules').classList.add('hidden');
+});
+
 $('btn-settings-close').addEventListener('click', () => {
   state.settings.gameName      = $('setting-game-name').value.trim() || 'President';
   state.settings.numPlayers    = parseInt($('setting-players').value);

@@ -674,6 +674,48 @@ body:has(#modal-hold:not(.hidden)) #player-zone {
 }
 #toast.show { opacity: 1; }
 
+/* ── Rules modal ──────────────────────────────────────────── */
+.rules-box {
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  gap: 0;
+}
+
+.rules-section {
+  padding: 14px 0;
+  border-top: 1px solid #2a2a2e;
+}
+.rules-section:first-of-type { border-top: none; padding-top: 4px; }
+
+.rules-section h3 {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.rules-section p,
+.rules-section ul {
+  font-size: .83rem;
+  color: #aaa;
+  line-height: 1.65;
+}
+
+.rules-section ul {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.rules-opt {
+  color: #ddd;
+  font-weight: 600;
+}
+
 /* ── Confetti ─────────────────────────────────────────────── */
 @keyframes confetti-cw {
   0%   { transform: translateY(0) rotate(0deg);     opacity: 1; }

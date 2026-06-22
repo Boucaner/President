@@ -140,7 +140,78 @@
         </div>
       </div>
       <div class="modal-actions">
+        <button id="btn-rules">Rules</button>
         <button id="btn-settings-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rules modal -->
+  <div id="modal-rules" class="modal hidden">
+    <div class="modal-box rules-box">
+      <h2>How to Play</h2>
+
+      <div class="rules-section">
+        <h3>Objective</h3>
+        <p>Be the first to empty your hand. The last player left holding cards loses. Roles are assigned by finish order and carry over to the next round.</p>
+      </div>
+
+      <div class="rules-section">
+        <h3>Card Rank</h3>
+        <p>3 (low) · 4 · 5 · 6 · 7 · 8 · 9 · 10 · J · Q · K · A · <strong>2</strong> (trump — highest, unbeatable)</p>
+      </div>
+
+      <div class="rules-section">
+        <h3>Playing a Trick</h3>
+        <ul>
+          <li>On an empty pile, lead any single card or set of cards of the same rank (pair, triple, etc.).</li>
+          <li>To follow, play the <em>same number</em> of cards at a <em>strictly higher</em> rank.</li>
+          <li>Pass if you can't or don't want to beat the pile.</li>
+          <li>A single <strong>2</strong> beats anything — including pairs — and ends the trick immediately.</li>
+          <li>The last player to play unbeaten wins the trick and leads next.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Roles (3+ players)</h3>
+        <ul>
+          <li><strong>President</strong> — finishes 1st</li>
+          <li><strong>Vice President</strong> — finishes 2nd</li>
+          <li><strong>Neutral</strong> — finishes in the middle</li>
+          <li><strong>Vice Asshole</strong> — finishes 2nd to last</li>
+          <li><strong>Asshole</strong> — finishes last</li>
+        </ul>
+        <p>In 2-player games the roles are simply President and Asshole.</p>
+      </div>
+
+      <div class="rules-section">
+        <h3>Card Trading (round 2+)</h3>
+        <p>Before play begins, the Asshole gives their best 1–2 cards to the President, who returns any cards back. The Vice Asshole gives their best card to the Vice President, who returns one card.</p>
+      </div>
+
+      <div class="rules-section">
+        <h3>Optional Rules</h3>
+        <ul>
+          <li><span class="rules-opt">One-time-around</span> — Each player gets exactly one action per trick. The trick clears automatically and the last player to play leads next.</li>
+          <li><span class="rules-opt">Card trading</span> — Enables the role-based card swap described above before each round.</li>
+          <li><span class="rules-opt">Auto-pass</span> — Automatically passes your turn when you have no legal play.</li>
+          <li><span class="rules-opt">Conquest mode</span> — First to 100 points wins the campaign. Scoring per round: 3+ players — 1st +10, 2nd +5, 3rd +1, last −1. 2-player — winner +10, loser +0.</li>
+          <li><span class="rules-opt">Extra card exchange</span> — When the deck doesn't divide evenly, leftover cards form a kitty. After card trading, each player in role order may freely swap any of their cards for cards in the kitty, or skip.</li>
+        </ul>
+      </div>
+
+      <div class="rules-section">
+        <h3>Hold Hand (2-player option)</h3>
+        <p>Three hands are dealt instead of two. The hold hand is dealt first, so it receives one extra card.</p>
+        <ul>
+          <li><strong>Round 1:</strong> All three hands are dealt and the hold hand is set aside. Play begins normally — no swapping.</li>
+          <li><strong>Round 2+:</strong> Before card trading, the President sees their own hand and may swap their entire hand for the hold hand, sight unseen. Then the Asshole gets the same offer — whatever the hold hand contains at that point.</li>
+          <li>After both players decide, the hold hand is discarded and normal card trading begins.</li>
+        </ul>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-rules-close" class="action-btn primary">Got it</button>
       </div>
     </div>
   </div>
