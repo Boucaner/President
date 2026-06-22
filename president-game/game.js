@@ -46,9 +46,11 @@ const state = {
     })(),
     conquest: false,
     kittyExchange: false,
+    holdHand: false,
   },
-  phase: 'start',    // 'start' | 'kittyExchange' | 'trading' | 'playing' | 'roundEnd'
+  phase: 'start',    // 'start' | 'holdExchange' | 'kittyExchange' | 'trading' | 'playing' | 'roundEnd'
   kitty: [],
+  holdHand: [],
   lastPlay: null,          // { playerName, cards } of most recent play (persists after pile clears)
   trickLog: [],            // completed tricks this round: [{ plays:[{playerName,cards}], winnerName }]
   currentTrickPlays: [],   // plays accumulated in the current trick
@@ -102,13 +104,26 @@ function dealRound() {
   state.valuePlayed = {};
   state.players.forEach(p => { p.handAssessed = false; p.target = 'middle'; });
 
-  // Shuffle and deal evenly — save remainder as kitty
-  let deck = shuffle(buildDeck());
-  const cardsEach = Math.floor(deck.length / n);
-  state.kitty = deck.slice(cardsEach * n);
-  deck.slice(0, cardsEach * n).forEach((card, i) => {
-    state.players[i % n].hand.push(card);
-  });
+  // Shuffle and deal
+  const deck = shuffle(buildDeck());
+  state.holdHand = [];
+
+  if (state.settings.holdHand && n === 2 && state.roundNum > 1) {
+    // Deal to 3 slots round-robin (hold at slot 0) so hold gets one extra card
+    state.kitty = [];
+    deck.forEach((card, i) => {
+      const slot = i % 3;
+      if (slot === 0) state.holdHand.push(card);
+      else state.players[slot - 1].hand.push(card);
+    });
+    state.holdHand = sortHand(state.holdHand);
+  } else {
+    const cardsEach = Math.floor(deck.length / n);
+    state.kitty = deck.slice(cardsEach * n);
+    deck.slice(0, cardsEach * n).forEach((card, i) => {
+      state.players[i % n].hand.push(card);
+    });
+  }
   state.players.forEach(p => { p.hand = sortHand(p.hand); });
 
   // Round 1: random first player; round 2+: President (index 0 after reorderSeats) leads
@@ -116,7 +131,7 @@ function dealRound() {
   state.currentTurn = firstPlayer;
   state.trickLeader = firstPlayer;
 
-  startTrading();
+  startHoldExchange();
 }
 
 function reorderSeats() {
@@ -360,6 +375,50 @@ function assignRoles() {
 
 function tradingCount() {
   return state.players.length <= 4 ? 2 : 1;
+}
+
+function startHoldExchange() {
+  if (!state.settings.holdHand || state.players.length !== 2 || state.roundNum <= 1 || !state.holdHand.length) {
+    startTrading();
+    return;
+  }
+  state.holdExchange = { playerOrder: [0, 1], currentStep: 0 };
+  state.phase = 'holdExchange';
+  advanceHoldExchange();
+}
+
+function advanceHoldExchange() {
+  const hx = state.holdExchange;
+  while (hx.currentStep < hx.playerOrder.length) {
+    const playerIdx = hx.playerOrder[hx.currentStep];
+    if (state.players[playerIdx].isHuman) return;
+    aiDoHoldExchange(playerIdx);
+    hx.currentStep++;
+  }
+  state.holdHand = [];
+  startTrading();
+}
+
+function aiDoHoldExchange(playerIdx) {
+  const player = state.players[playerIdx];
+  const m = assessHand(player.hand);
+  if (m.score < 5) {
+    const temp = [...player.hand];
+    player.hand = sortHand([...state.holdHand]);
+    state.holdHand = sortHand(temp);
+  }
+}
+
+function humanCompleteHoldExchange(swap) {
+  const hIdx = humanIdx();
+  if (swap) {
+    const temp = [...state.players[hIdx].hand];
+    state.players[hIdx].hand = sortHand([...state.holdHand]);
+    state.holdHand = sortHand(temp);
+  }
+  state.holdExchange.currentStep++;
+  advanceHoldExchange();
+  return true;
 }
 
 function startKittyExchange() {

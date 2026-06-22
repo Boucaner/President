@@ -43,7 +43,7 @@ function renderGameName() {
   if (startTitle) startTitle.textContent = name;
 }
 
-console.log('%c[President] ui.js loaded — build 20', 'color:lime;font-weight:bold');
+console.log('%c[President] ui.js loaded — build 21', 'color:lime;font-weight:bold');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -55,6 +55,7 @@ $('btn-start').addEventListener('click', () => {
     autoPass:       $('start-auto-pass').checked,
     conquest:       $('start-conquest').checked,
     kittyExchange:  $('start-kitty-exchange').checked,
+    holdHand:       $('start-hold-hand').checked,
   };
   elModalStart.classList.add('hidden');
   initGame(settings);  // no savedConquest → fresh start, clears stored state
@@ -91,6 +92,7 @@ $('btn-settings').addEventListener('click', () => {
   $('setting-auto-pass').checked       = state.settings.autoPass;
   $('setting-conquest').checked        = state.settings.conquest;
   $('setting-kitty-exchange').checked  = state.settings.kittyExchange;
+  $('setting-hold-hand').checked       = state.settings.holdHand;
   for (let i = 1; i <= 6; i++) {
     $(`ai-name-${i}`).value = state.settings.aiNames[i - 1] || '';
   }
@@ -108,6 +110,7 @@ $('btn-settings-close').addEventListener('click', () => {
   state.settings.autoPass      = $('setting-auto-pass').checked;
   state.settings.conquest      = $('setting-conquest').checked;
   state.settings.kittyExchange = $('setting-kitty-exchange').checked;
+  state.settings.holdHand      = $('setting-hold-hand').checked;
   for (let i = 1; i <= 6; i++) {
     const val = $(`ai-name-${i}`).value.trim();
     state.settings.aiNames[i - 1] = val || DEFAULT_AI_NAMES[i - 1];
@@ -496,7 +499,9 @@ $('btn-roundend-deal').addEventListener('click', () => {
   $('modal-roundend').classList.add('hidden');
   dealRound();
   render();
-  if (state.phase === 'kittyExchange') {
+  if (state.phase === 'holdExchange') {
+    showHoldExchangeModal();
+  } else if (state.phase === 'kittyExchange') {
     showKittyExchangeModal();
   } else if (state.phase === 'trading') {
     showTradingModal();
@@ -504,6 +509,37 @@ $('btn-roundend-deal').addEventListener('click', () => {
     scheduleAiIfNeeded();
   }
 });
+
+function showHoldExchangeModal() {
+  const hIdx = humanIdx();
+  const human = state.players[hIdx];
+  const holdCount = state.holdHand.length;
+  const step = state.holdExchange.currentStep;
+  const isPresident = human.role === 'President';
+
+  $('hold-title').textContent = isPresident ? 'Hold Hand — President\'s Turn' : 'Hold Hand — Your Turn';
+  $('hold-desc').textContent  =
+    `The hold hand has ${holdCount} card${holdCount !== 1 ? 's' : ''} (sight unseen). ` +
+    `You may swap your entire hand for it, or keep what you have.`;
+
+  const cardsEl = $('hold-your-cards');
+  cardsEl.innerHTML = '';
+  human.hand.forEach(card => cardsEl.appendChild(buildCardEl(card, false)));
+
+  const after = () => {
+    $('modal-hold').classList.add('hidden');
+    render();
+    if (state.phase === 'holdExchange') { showHoldExchangeModal(); return; }
+    if (state.phase === 'trading')      { showTradingModal();       return; }
+    if (state.phase === 'kittyExchange'){ showKittyExchangeModal(); return; }
+    scheduleAiIfNeeded();
+  };
+
+  $('btn-hold-keep').onclick = () => { humanCompleteHoldExchange(false); after(); };
+  $('btn-hold-swap').onclick  = () => { humanCompleteHoldExchange(true);  after(); };
+
+  $('modal-hold').classList.remove('hidden');
+}
 
 function showKittyExchangeModal() {
   const kx = state.kittyExchange;
