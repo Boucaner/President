@@ -542,7 +542,8 @@ html, body {
 #trading-received-cards,
 #trading-give-cards,
 #kitty-cards,
-#kitty-hand-cards {
+#kitty-hand-cards,
+#hold-your-cards {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -551,7 +552,8 @@ html, body {
 #trading-give-cards .card { cursor: pointer; }
 
 #modal-trading .modal-box,
-#modal-kitty .modal-box {
+#modal-kitty .modal-box,
+#modal-hold .modal-box {
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;

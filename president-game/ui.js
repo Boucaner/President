@@ -751,6 +751,13 @@ function updateConquestAvailability() {
 $('start-conquest').addEventListener('change', updateConquestAvailability);
 $('start-players').addEventListener('change', updateConquestAvailability);
 
+$('start-hold-hand').addEventListener('change', () => {
+  if ($('start-hold-hand').checked) $('start-players').value = '2';
+});
+$('setting-hold-hand').addEventListener('change', () => {
+  if ($('setting-hold-hand').checked) $('setting-players').value = '2';
+});
+
 // Boot: sync conquest toggle and show resume if applicable
 $('start-conquest').checked = state.settings.conquest;
 updateConquestAvailability();
