@@ -116,7 +116,7 @@ function dealRound() {
   state.currentTurn = firstPlayer;
   state.trickLeader = firstPlayer;
 
-  startKittyExchange();
+  startTrading();
 }
 
 function reorderSeats() {
@@ -364,7 +364,7 @@ function tradingCount() {
 
 function startKittyExchange() {
   if (!state.settings.kittyExchange || state.roundNum <= 1 || !state.kitty.length) {
-    startTrading();
+    state.phase = 'playing';
     return;
   }
   state.kittyExchange = {
@@ -384,7 +384,7 @@ function advanceKittyExchange() {
     aiDoKittyExchange(playerIdx);
     kx.currentStep++;
   }
-  startTrading();
+  state.phase = 'playing';
 }
 
 function aiDoKittyExchange(playerIdx) {
@@ -434,7 +434,7 @@ function humanCompleteKittyExchange(takeCards, giveCards) {
 
 function startTrading() {
   if (state.roundNum <= 1 || !state.settings.cardTrading) {
-    state.phase = 'playing';
+    startKittyExchange();
     return;
   }
 
@@ -518,7 +518,11 @@ function startTrading() {
   }
 
   const humanInTrading = [presIdx, assIdx, vpIdx, vaIdx].includes(hIdx);
-  state.phase = (presIdx >= 0 && assIdx >= 0 && humanInTrading) ? 'trading' : 'playing';
+  if (presIdx >= 0 && assIdx >= 0 && humanInTrading) {
+    state.phase = 'trading';
+  } else {
+    startKittyExchange();
+  }
 }
 
 function takeTopCards(playerIdx, count) {
@@ -542,7 +546,7 @@ function humanCompleteTrading(cards) {
   });
   state.players[hIdx].hand = sortHand(state.players[hIdx].hand);
   state.players[t.humanGiveTo].hand = sortHand(state.players[t.humanGiveTo].hand);
-  state.phase = 'playing';
+  startKittyExchange();
   return true;
 }
 

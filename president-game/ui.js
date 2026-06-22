@@ -43,7 +43,7 @@ function renderGameName() {
   if (startTitle) startTitle.textContent = name;
 }
 
-console.log('%c[President] ui.js loaded — build 19', 'color:lime;font-weight:bold');
+console.log('%c[President] ui.js loaded — build 20', 'color:lime;font-weight:bold');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -581,8 +581,9 @@ function showTradingModal() {
 
   // Neutral players skip the modal entirely
   if (role !== 'President' && role !== 'Vice President' && role !== 'Asshole' && role !== 'Vice Asshole') {
-    state.phase = 'playing';
+    startKittyExchange();
     render();
+    if (state.phase === 'kittyExchange') { showKittyExchangeModal(); return; }
     scheduleAiIfNeeded();
     return;
   }
@@ -651,6 +652,7 @@ function showTradingModal() {
         tradeSelectedCards = [];
         $('modal-trading').classList.add('hidden');
         render();
+        if (state.phase === 'kittyExchange') { showKittyExchangeModal(); return; }
         scheduleAiIfNeeded();
       }
     };
@@ -660,8 +662,9 @@ function showTradingModal() {
     $('btn-trading-confirm').disabled    = false;
     $('btn-trading-confirm').onclick = () => {
       $('modal-trading').classList.add('hidden');
-      state.phase = 'playing';
+      startKittyExchange();
       render();
+      if (state.phase === 'kittyExchange') { showKittyExchangeModal(); return; }
       scheduleAiIfNeeded();
     };
   }
