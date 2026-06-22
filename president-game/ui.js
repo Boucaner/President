@@ -408,6 +408,8 @@ function scheduleAiIfNeeded() {
     return;
   }
 
+  const human = state.players.find(p => p.isHuman);
+  const delay = (human && human.finished) ? 350 : aiDelay;
   setTimeout(() => {
     if (state.phase !== 'playing') return;
     if (state.players[state.currentTurn]?.isHuman) return;
@@ -416,7 +418,7 @@ function scheduleAiIfNeeded() {
     render();
     if (state.phase === 'roundEnd') { showRoundEnd(); return; }
     scheduleAiIfNeeded();
-  }, aiDelay);
+  }, delay);
 }
 
 // ── Round end ─────────────────────────────────────────────────────────────────
