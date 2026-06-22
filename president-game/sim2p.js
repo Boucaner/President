@@ -44,10 +44,11 @@ function aiLead(nonTwoGroups, twos, hand, style, oppHandSize) {
     // Pressure: opponent close to going out — lead high single
     if (oppHandSize <= 3 && nonTwoGroups.length)
       return [nonTwoGroups[nonTwoGroups.length-1][0]];
-    // Normal: lead biggest group at lowest rank
-    const byCount2P = [...nonTwoGroups].sort((a,b) =>
-      b.length !== a.length ? b.length-a.length : a[0].rank-b[0].rank);
-    if (byCount2P.length) return byCount2P[0];
+    // Normal: chip away with lowest single — preserve groups for endgame and reactive follow
+    const singles2P = nonTwoGroups.filter(g => g.length === 1);
+    if (singles2P.length) return [singles2P[0][0]];
+    // No singles: lead smallest group at lowest rank
+    if (nonTwoGroups.length) return nonTwoGroups[0];
     return twos.length ? [twos[0]] : [hand[0]];
   }
   // 4+ player: style-differentiated

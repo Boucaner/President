@@ -684,10 +684,11 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
       // Pressure: opponent 3 cards or fewer — lead high single to deny their exit
       if (oppHandSize <= 3 && nonTwoGroups.length > 0)
         return [nonTwoGroups[nonTwoGroups.length - 1][0]];
-      // Normal: lead biggest group at lowest rank — forces count-matching, empties hand fast
-      const byCount2P = [...nonTwoGroups].sort((a, b) =>
-        b.length !== a.length ? b.length - a.length : a[0].rank - b[0].rank);
-      if (byCount2P.length > 0) return byCount2P[0];
+      // Normal: chip away with lowest single — preserve groups for endgame and reactive follow
+      const singles2P = nonTwoGroups.filter(g => g.length === 1);
+      if (singles2P.length > 0) return [singles2P[0][0]];
+      // No singles: lead smallest group at lowest rank
+      if (nonTwoGroups.length > 0) return nonTwoGroups[0];
     } else if (style === 'aggressive') {
       // 4+ player aggressive: lead largest group of cheapest cards — empty hand fast
       const byCount = [...nonTwoGroups].sort((a, b) =>

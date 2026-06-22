@@ -43,7 +43,7 @@ function renderGameName() {
   if (startTitle) startTitle.textContent = name;
 }
 
-console.log('%c[President] ui.js loaded — build 22', 'color:lime;font-weight:bold');
+console.log('%c[President] ui.js loaded — build 23', 'color:lime;font-weight:bold');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
