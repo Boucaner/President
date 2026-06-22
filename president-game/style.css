@@ -549,6 +549,11 @@ html, body {
   gap: 6px;
 }
 
+#hold-your-cards {
+  max-height: 38vh;
+  overflow-y: auto;
+}
+
 #trading-give-cards .card { cursor: pointer; }
 
 #modal-trading .modal-box,
