@@ -66,25 +66,40 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, is2P) {
   const beaters = nonTwoGroups
     .filter(g => g.length >= pileCount && g[0].rank > pileRank)
     .sort((a,b) => a[0].rank-b[0].rank);
-  // 2-player: always beat, always use 2 when needed (target='top' behavior)
+  const lb = beaters[0] || null;
+  // Breaking a pair/triple to follow a single is style-gated (pileCount===1 only)
+  function wouldBreak() { return lb && pileCount === 1 && lb.length > 1; }
+  // 2-player: target='top' behavior, but style still gates group-breaking
   if (is2P) {
-    if (beaters.length) return beaters[0].slice(0, pileCount);
+    if (lb) {
+      if (wouldBreak()) {
+        if (style === 'conservative' && lb[0].rank < 10) return null;
+        if (style === 'neutral'      && lb[0].rank <  8) return null;
+      }
+      return lb.slice(0, pileCount);
+    }
     if (twos.length) return [twos[0]];
     return null;
   }
   // 4+ player: style-differentiated
   if (style === 'conservative') {
-    if (beaters.length) return beaters[0].slice(0, pileCount);
+    if (lb) {
+      if (wouldBreak() && lb[0].rank < 10) return null;
+      return lb.slice(0, pileCount);
+    }
     if (twos.length && pileRank >= 9) return [twos[0]];
     return null;
   }
   if (style === 'neutral') {
-    if (beaters.length) return beaters[0].slice(0, pileCount);
+    if (lb) {
+      if (wouldBreak() && lb[0].rank < 8) return null;
+      return lb.slice(0, pileCount);
+    }
     if (twos.length) return [twos[0]];
     return null;
   }
-  // aggressive
-  if (beaters.length) return beaters[0].slice(0, pileCount);
+  // aggressive: always beat, always break
+  if (lb) return lb.slice(0, pileCount);
   if (twos.length && pileRank >= 7) return [twos[0]];
   return null;
 }

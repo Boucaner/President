@@ -793,7 +793,15 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
 
   // ── Target: 'top' — go out as fast as possible ─────────────────────────────
   if (target === 'top') {
-    if (lowestBeater) return lowestBeater.slice(0, pileCount);
+    if (lowestBeater) {
+      // Breaking a pair/triple to follow a single is a style decision — only gate pileCount=1
+      if (pileCount === 1 && lowestBeater.length > 1) {
+        if (style === 'conservative' && lowestBeater[0].rank < 10) return null; // K/A only
+        if (style === 'neutral'      && lowestBeater[0].rank <  8) return null; // J+ only
+        // aggressive: always break and take the lead
+      }
+      return lowestBeater.slice(0, pileCount);
+    }
     if (twos.length > 0) return [twos[0]];
     return null;
   }
@@ -804,6 +812,12 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
       // No non-trump beater; use 2 only on very high piles
       const twoEmergencyRank = style === 'conservative' ? 11 : 10; // A only / K+
       if (twos.length > 0 && pileRank >= twoEmergencyRank) return [twos[0]];
+      return null;
+    }
+    // Never break a group for survive — preserve pairs/triples for reactive follow
+    if (pileCount === 1 && lowestBeater.length > 1) {
+      const twoThreshold = style === 'conservative' ? 11 : style === 'neutral' ? 10 : 9;
+      if (twos.length > 0 && pileRank >= twoThreshold) return [twos[0]];
       return null;
     }
     // Play only when cost is low: cheap card AND have something better in reserve
@@ -824,6 +838,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'middle' — balanced; minor refinements per style ───────────────
   if (style === 'conservative') {
     if (lowestBeater) {
+      // Breaking a pair to follow a single: only if K or A
+      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 10) return null;
       // Don't sacrifice our only King or Ace when we have nothing else and won't go out
       if (playRank >= 10 && higherAfter === 0 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
@@ -832,11 +848,15 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     return null;
   }
   if (style === 'neutral') {
-    if (lowestBeater) return lowestBeater.slice(0, pileCount);
+    if (lowestBeater) {
+      // Breaking a pair to follow a single: only if J or higher
+      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 8) return null;
+      return lowestBeater.slice(0, pileCount);
+    }
     if (twos.length > 0) return [twos[0]];
     return null;
   }
-  // aggressive + middle
+  // aggressive + middle: always beat, always break if needed
   if (lowestBeater) return lowestBeater.slice(0, pileCount);
   if (twos.length > 0 && pileRank >= 7) return [twos[0]]; // 10+
   return null;
