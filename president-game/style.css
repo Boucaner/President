@@ -659,6 +659,26 @@ html, body {
 }
 #toast.show { opacity: 1; }
 
+/* ── Confetti ─────────────────────────────────────────────── */
+@keyframes confetti-cw {
+  0%   { transform: translateY(0) rotate(0deg);     opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(540deg);  opacity: 0; }
+}
+@keyframes confetti-ccw {
+  0%   { transform: translateY(0) rotate(0deg);     opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(-540deg); opacity: 0; }
+}
+.confetti-piece {
+  position: fixed;
+  top: -14px;
+  pointer-events: none;
+  z-index: 300;
+  animation-fill-mode: forwards;
+  animation-timing-function: linear;
+}
+
 /* ── Safe-area inset (notch / home bar) ─────────────────────── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   #player-zone { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
