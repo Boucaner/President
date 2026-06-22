@@ -5,7 +5,7 @@
 // Cards: 52-card deck, ranks 3(0)–A(11)–2(12)
 // Hold hand: 3-way round-robin deal → hold=18 cards, each player=17 cards
 // No hold: normal 2-way deal → 26 cards each
-// Card trading (round 2+): Wiper gives President top 2; President returns 2 worst
+// Card trading (round 2+): Wiper gives President top 1; President returns 1 worst
 // Hold swap (round 2+): President decides first, then Wiper; AI swaps if hold > own score
 
 const SUITS  = ['♠','♥','♦','♣'];
@@ -47,8 +47,8 @@ function aiLead(nonTwoGroups, twos, hand, style, oppHandSize) {
     // Normal: chip away with lowest single — preserve groups for endgame and reactive follow
     const singles2P = nonTwoGroups.filter(g => g.length === 1);
     if (singles2P.length) return [singles2P[0][0]];
-    // No singles: lead smallest group at lowest rank
-    if (nonTwoGroups.length) return nonTwoGroups[0];
+    // No singles: break lowest group and lead one card, saving rest for reactive follow
+    if (nonTwoGroups.length) return [nonTwoGroups[0][0]];
     return twos.length ? [twos[0]] : [hand[0]];
   }
   // 4+ player: style-differentiated
@@ -166,11 +166,11 @@ function simulateRound(players) {
   return finishOrder;
 }
 
-// ── Card trading (2-player: 2-card swap) ──────────────────────────────────────
+// ── Card trading (2-player: 1-card swap) ──────────────────────────────────────
 function doTrading(players, presIdx) {
   const wIdx = 1 - presIdx;
   const sorted = [...players[wIdx].hand].sort((a,b) => b.rank-a.rank);
-  const taken = sorted.slice(0, 2);
+  const taken = sorted.slice(0, 1);
   taken.forEach(c => {
     const i = players[wIdx].hand.findIndex(h => h.suit===c.suit && h.value===c.value);
     if (i !== -1) players[wIdx].hand.splice(i, 1);
@@ -179,7 +179,7 @@ function doTrading(players, presIdx) {
   players[presIdx].hand = sortHand(players[presIdx].hand);
   const recvKeys = new Set(taken.map(c => c.suit+c.value));
   const pool = players[presIdx].hand.filter(c => !recvKeys.has(c.suit+c.value));
-  const give = (pool.length >= 2 ? pool : players[presIdx].hand).sort((a,b) => a.rank-b.rank).slice(0, 2);
+  const give = (pool.length >= 1 ? pool : players[presIdx].hand).sort((a,b) => a.rank-b.rank).slice(0, 1);
   give.forEach(c => {
     const i = players[presIdx].hand.findIndex(h => h.suit===c.suit && h.value===c.value);
     if (i !== -1) players[presIdx].hand.splice(i, 1);

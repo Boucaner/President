@@ -379,6 +379,7 @@ function assignRoles() {
 // ── Card trading ──────────────────────────────────────────────────────────────
 
 function tradingCount() {
+  if (state.players.length === 2) return 1;
   return state.players.length <= 4 ? 2 : 1;
 }
 
@@ -687,8 +688,8 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
       // Normal: chip away with lowest single — preserve groups for endgame and reactive follow
       const singles2P = nonTwoGroups.filter(g => g.length === 1);
       if (singles2P.length > 0) return [singles2P[0][0]];
-      // No singles: lead smallest group at lowest rank
-      if (nonTwoGroups.length > 0) return nonTwoGroups[0];
+      // No singles: break lowest group and lead one card, saving the rest for reactive follow
+      if (nonTwoGroups.length > 0) return [nonTwoGroups[0][0]];
     } else if (style === 'aggressive') {
       // 4+ player aggressive: lead largest group of cheapest cards — empty hand fast
       const byCount = [...nonTwoGroups].sort((a, b) =>
