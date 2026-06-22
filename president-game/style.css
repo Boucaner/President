@@ -557,6 +557,11 @@ html, body {
   overflow-y: auto;
 }
 
+/* Brighten player hand while hold-swap dialog is open */
+body:has(#modal-hold:not(.hidden)) #player-zone {
+  filter: brightness(1.6);
+}
+
 /* Hold modal: lighter overlay + anchored to top so hand is visible below */
 #modal-hold {
   background: rgba(0, 0, 0, 0.55);
