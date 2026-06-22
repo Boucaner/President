@@ -108,7 +108,7 @@ function dealRound() {
   const deck = shuffle(buildDeck());
   state.holdHand = [];
 
-  if (state.settings.holdHand && n === 2 && state.roundNum > 1) {
+  if (state.settings.holdHand && n === 2) {
     // Deal to 3 slots round-robin (hold at slot 0) so hold gets one extra card
     state.kitty = [];
     deck.forEach((card, i) => {
