@@ -1,6 +1,6 @@
 // ── Game state ────────────────────────────────────────────────────────────────
 
-const ROLES = ['President','Vice President','Neutral','Vice Asshole','Asshole'];
+const ROLES = ['President','Vice President','Neutral','Vice Wiper','Wiper'];
 const DEFAULT_AI_NAMES = ['Alice', 'Bob', 'Carlos', 'Diana', 'Eddie', 'Fiona'];
 const CONQUEST_TARGET = 100;
 
@@ -31,7 +31,7 @@ const state = {
         const s = JSON.parse(localStorage.getItem('presidentRoleNames'));
         if (s && typeof s === 'object') return s;
       } catch {}
-      return { 'President': 'President', 'Vice President': 'Vice President', 'Neutral': 'Neutral', 'Vice Asshole': 'Vice Asshole', 'Asshole': 'Asshole' };
+      return { 'President': 'President', 'Vice President': 'Vice President', 'Neutral': 'Neutral', 'Vice Wiper': 'Vice Wiper', 'Wiper': 'Wiper' };
     })(),
     aiNames: (() => {
       try {
@@ -135,7 +135,7 @@ function dealRound() {
 }
 
 function reorderSeats() {
-  const roleOrder = { 'President': 0, 'Vice President': 1, 'Neutral': 2, 'Vice Asshole': 3, 'Asshole': 4 };
+  const roleOrder = { 'President': 0, 'Vice President': 1, 'Neutral': 2, 'Vice Wiper': 3, 'Wiper': 4 };
 
   // Pre-compute finish positions by original index so neutrals keep relative order
   const finishPos = {};
@@ -182,14 +182,14 @@ function assessHand(hand) {
 function setPlayerTarget(player) {
   const m = assessHand(player.hand);
   player.handMetrics = m;
-  const roleOrder = { 'President': 0, 'Vice President': 1, 'Neutral': 2, 'Vice Asshole': 3, 'Asshole': 4 };
+  const roleOrder = { 'President': 0, 'Vice President': 1, 'Neutral': 2, 'Vice Wiper': 3, 'Wiper': 4 };
   const rank = player.role !== null ? (roleOrder[player.role] ?? 2) : 2;
   if (m.score >= 8) {
     player.target = 'top';
   } else if (m.score >= 4) {
-    player.target = rank >= 3 ? 'middle' : 'top'; // VA/Asshole with medium hand aim to move up, not dominate
+    player.target = rank >= 3 ? 'middle' : 'top'; // VA/Wiper with medium hand aim to move up, not dominate
   } else {
-    player.target = rank >= 3 ? 'survive' : 'middle'; // weak hand: VA/Asshole just survive; others play safe
+    player.target = rank >= 3 ? 'survive' : 'middle'; // weak hand: VA/Wiper just survive; others play safe
   }
 }
 
@@ -334,7 +334,7 @@ function nextActivePlayer(fromIdx) {
 function checkRoundEnd() {
   const active = state.players.filter(p => !p.finished);
   if (active.length <= 1) {
-    // Last player remaining is Asshole
+    // Last player remaining is Wiper
     const last = state.players.find(p => !p.finished);
     if (last) {
       last.finished = true;
@@ -355,16 +355,16 @@ function assignRoles() {
 
   if (n === 2) {
     if (order[0] !== undefined) state.players[order[0]].role = 'President';
-    if (order[1] !== undefined) state.players[order[1]].role = 'Asshole';
+    if (order[1] !== undefined) state.players[order[1]].role = 'Wiper';
     return;
   }
 
   if (order[0] !== undefined) state.players[order[0]].role = 'President';
-  if (order[n - 1] !== undefined) state.players[order[n - 1]].role = 'Asshole';
+  if (order[n - 1] !== undefined) state.players[order[n - 1]].role = 'Wiper';
 
   if (n >= 4) {
     if (order[1] !== undefined) state.players[order[1]].role = 'Vice President';
-    if (order[n - 2] !== undefined) state.players[order[n - 2]].role = 'Vice Asshole';
+    if (order[n - 2] !== undefined) state.players[order[n - 2]].role = 'Vice Wiper';
   }
 
   // Everyone else neutral
@@ -501,9 +501,9 @@ function startTrading() {
   const tc   = tradingCount();
   const hIdx = humanIdx();
   const presIdx = state.players.findIndex(p => p.role === 'President');
-  const assIdx  = state.players.findIndex(p => p.role === 'Asshole');
+  const assIdx  = state.players.findIndex(p => p.role === 'Wiper');
   const vpIdx   = n >= 4 ? state.players.findIndex(p => p.role === 'Vice President') : -1;
-  const vaIdx   = n >= 4 ? state.players.findIndex(p => p.role === 'Vice Asshole')   : -1;
+  const vaIdx   = n >= 4 ? state.players.findIndex(p => p.role === 'Vice Wiper')   : -1;
 
   state.trading = {
     presIdx, assIdx, vpIdx, vaIdx,
@@ -516,7 +516,7 @@ function startTrading() {
   };
   const t = state.trading;
 
-  // Asshole → President (automatic)
+  // Wiper → President (automatic)
   let presReceived = [];
   if (presIdx >= 0 && assIdx >= 0) {
     presReceived = takeTopCards(assIdx, tc);
@@ -534,7 +534,7 @@ function startTrading() {
     if (vpIdx === hIdx) t.humanReceived.push(...vpReceived);
   }
 
-  // AI President gives worst ORIGINAL cards back to Asshole (never re-gifts received cards)
+  // AI President gives worst ORIGINAL cards back to Wiper (never re-gifts received cards)
   if (presIdx >= 0 && assIdx >= 0 && presIdx !== hIdx) {
     const receivedKeys = new Set(presReceived.map(c => c.suit + c.value));
     const original = state.players[presIdx].hand.filter(c => !receivedKeys.has(c.suit + c.value));

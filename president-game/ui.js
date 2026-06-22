@@ -27,8 +27,8 @@ let selectedCards = [];
 let tradeSelectedCards = [];
 let aiDelay = 800; // ms between AI moves
 
-const ROLE_KEYS = ['President', 'Vice President', 'Neutral', 'Vice Asshole', 'Asshole'];
-const ROLE_IDS  = ['president', 'vp', 'neutral', 'va', 'asshole'];
+const ROLE_KEYS = ['President', 'Vice President', 'Neutral', 'Vice Wiper', 'Wiper'];
+const ROLE_IDS  = ['president', 'vp', 'neutral', 'vw', 'wiper'];
 
 function displayRoleName(role) {
   if (!role) return '';
@@ -620,7 +620,7 @@ function showTradingModal() {
   const role = human.role;
 
   // Neutral players skip the modal entirely
-  if (role !== 'President' && role !== 'Vice President' && role !== 'Asshole' && role !== 'Vice Asshole') {
+  if (role !== 'President' && role !== 'Vice President' && role !== 'Wiper' && role !== 'Vice Wiper') {
     startKittyExchange();
     render();
     if (state.phase === 'kittyExchange') { showKittyExchangeModal(); return; }
@@ -633,15 +633,15 @@ function showTradingModal() {
 
   if (role === 'President') {
     title = `Card Trading — You are ${displayRoleName('President')}`;
-    desc  = `You received ${t.tradeCount} card${t.tradeCount > 1 ? 's' : ''} from the ${displayRoleName('Asshole')}. Select ${t.tradeCount} to give back.`;
+    desc  = `You received ${t.tradeCount} card${t.tradeCount > 1 ? 's' : ''} from the ${displayRoleName('Wiper')}. Select ${t.tradeCount} to give back.`;
   } else if (role === 'Vice President') {
     title = `Card Trading — You are ${displayRoleName('Vice President')}`;
-    desc  = `You received 1 card from the ${displayRoleName('Vice Asshole')}. Select 1 card to give back.`;
-  } else if (role === 'Asshole') {
-    title = `Card Trading — You are the ${displayRoleName('Asshole')}`;
+    desc  = `You received 1 card from the ${displayRoleName('Vice Wiper')}. Select 1 card to give back.`;
+  } else if (role === 'Wiper') {
+    title = `Card Trading — You are the ${displayRoleName('Wiper')}`;
     desc  = `Your ${t.tradeCount} best card${t.tradeCount > 1 ? 's were' : ' was'} given to the ${displayRoleName('President')}. You received:`;
   } else {
-    title = `Card Trading — You are ${displayRoleName('Vice Asshole')}`;
+    title = `Card Trading — You are ${displayRoleName('Vice Wiper')}`;
     desc  = `Your best card was given to the ${displayRoleName('Vice President')}. You received:`;
   }
 
@@ -771,8 +771,8 @@ function roleClass(role) {
     'President':       'role-president',
     'Vice President':  'role-vp',
     'Neutral':         'role-neutral',
-    'Vice Asshole':    'role-va',
-    'Asshole':         'role-asshole',
+    'Vice Wiper':    'role-vw',
+    'Wiper':         'role-wiper',
   })[role] || 'role-neutral';
 }
 

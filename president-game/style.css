@@ -377,9 +377,9 @@ html, body {
   letter-spacing: 1px;
 }
 .role-president  { background: var(--gold); color: #333; }
-.role-asshole    { background: #7f1d1d; color: #fca5a5; }
+.role-wiper      { background: #7f1d1d; color: #fca5a5; }
 .role-vp         { background: #78716c; color: #e7e5e4; }
-.role-va         { background: #44403c; color: #a8a29e; }
+.role-vw         { background: #44403c; color: #a8a29e; }
 .role-neutral    { background: #374151; color: #9ca3af; }
 
 #hand {

@@ -96,20 +96,20 @@ function assignRoles(players, finishOrder) {
   players.forEach(p => p.role = null);
   if (n === 2) {
     if (finishOrder[0] !== undefined) players[finishOrder[0]].role = 'President';
-    if (finishOrder[1] !== undefined) players[finishOrder[1]].role = 'Asshole';
+    if (finishOrder[1] !== undefined) players[finishOrder[1]].role = 'Wiper';
     return;
   }
   if (finishOrder[0] !== undefined) players[finishOrder[0]].role = 'President';
-  if (finishOrder[n-1] !== undefined) players[finishOrder[n-1]].role = 'Asshole';
+  if (finishOrder[n-1] !== undefined) players[finishOrder[n-1]].role = 'Wiper';
   if (n >= 4) {
     if (finishOrder[1] !== undefined) players[finishOrder[1]].role = 'Vice President';
-    if (finishOrder[n-2] !== undefined) players[finishOrder[n-2]].role = 'Vice Asshole';
+    if (finishOrder[n-2] !== undefined) players[finishOrder[n-2]].role = 'Vice Wiper';
   }
   players.forEach(p => { if (!p.role) p.role = 'Neutral'; });
 }
 
 function reorderSeats(players, finishOrder) {
-  const roleOrder = { President:0, 'Vice President':1, Neutral:2, 'Vice Asshole':3, Asshole:4 };
+  const roleOrder = { President:0, 'Vice President':1, Neutral:2, 'Vice Wiper':3, Wiper:4 };
   const finishPos = {};
   finishOrder.forEach((idx, pos) => { finishPos[idx] = pos; });
   const withIdx = players.map((p,i) => ({p,i}));
@@ -276,9 +276,9 @@ function doTrading(players, roundNum) {
   const n = players.length;
   const tc = tradingCount(n);
   const presIdx = players.findIndex(p => p.role === 'President');
-  const assIdx  = players.findIndex(p => p.role === 'Asshole');
+  const assIdx  = players.findIndex(p => p.role === 'Wiper');
   const vpIdx   = n >= 4 ? players.findIndex(p => p.role === 'Vice President') : -1;
-  const vaIdx   = n >= 4 ? players.findIndex(p => p.role === 'Vice Asshole')   : -1;
+  const vaIdx   = n >= 4 ? players.findIndex(p => p.role === 'Vice Wiper')   : -1;
 
   let presReceived = [];
   if (presIdx >= 0 && assIdx >= 0) {

@@ -86,7 +86,7 @@
       <label class="toggle-row">
         Card trading between rounds
         <input type="checkbox" id="setting-card-trading" checked>
-        <span class="toggle-hint">President takes Asshole's best card(s); Asshole receives any card back</span>
+        <span class="toggle-hint">President takes Wiper's best card(s); Wiper receives any card back</span>
       </label>
       <label class="toggle-row">
         Auto-pass when no play available
@@ -106,7 +106,7 @@
       <label class="toggle-row">
         Hold hand (2-player)
         <input type="checkbox" id="setting-hold-hand">
-        <span class="toggle-hint">A 3rd hand is dealt; President then Asshole may each swap their hand for it, sight unseen</span>
+        <span class="toggle-hint">A 3rd hand is dealt; President then Wiper may each swap their hand for it, sight unseen</span>
       </label>
       <label>
         Card back
@@ -135,8 +135,8 @@
           <label class="name-row">President<input type="text" id="role-name-president" maxlength="16" placeholder="President"></label>
           <label class="name-row">Vice Pres.<input type="text" id="role-name-vp" maxlength="16" placeholder="Vice President"></label>
           <label class="name-row">Neutral<input type="text" id="role-name-neutral" maxlength="16" placeholder="Neutral"></label>
-          <label class="name-row">Vice A-hole<input type="text" id="role-name-va" maxlength="16" placeholder="Vice Asshole"></label>
-          <label class="name-row">A-hole<input type="text" id="role-name-asshole" maxlength="16" placeholder="Asshole"></label>
+          <label class="name-row">Vice Wiper<input type="text" id="role-name-vw" maxlength="16" placeholder="Vice Wiper"></label>
+          <label class="name-row">Wiper<input type="text" id="role-name-wiper" maxlength="16" placeholder="Wiper"></label>
         </div>
       </div>
       <div class="modal-actions">
@@ -178,15 +178,15 @@
           <li><strong>President</strong> — finishes 1st</li>
           <li><strong>Vice President</strong> — finishes 2nd</li>
           <li><strong>Neutral</strong> — finishes in the middle</li>
-          <li><strong>Vice Asshole</strong> — finishes 2nd to last</li>
-          <li><strong>Asshole</strong> — finishes last</li>
+          <li><strong>Vice Wiper</strong> — finishes 2nd to last</li>
+          <li><strong>Wiper</strong> — finishes last</li>
         </ul>
-        <p>In 2-player games the roles are simply President and Asshole.</p>
+        <p>In 2-player games the roles are simply President and Wiper.</p>
       </div>
 
       <div class="rules-section">
         <h3>Card Trading (round 2+)</h3>
-        <p>Before play begins, the Asshole gives their best 1–2 cards to the President, who returns any cards back. The Vice Asshole gives their best card to the Vice President, who returns one card.</p>
+        <p>Before play begins, the Wiper gives their best 1–2 cards to the President, who returns any cards back. The Vice Wiper gives their best card to the Vice President, who returns one card.</p>
       </div>
 
       <div class="rules-section">
@@ -205,7 +205,7 @@
         <p>Three hands are dealt instead of two. The hold hand is dealt first, so it receives one extra card.</p>
         <ul>
           <li><strong>Round 1:</strong> All three hands are dealt and the hold hand is set aside. Play begins normally — no swapping.</li>
-          <li><strong>Round 2+:</strong> Before card trading, the President sees their own hand and may swap their entire hand for the hold hand, sight unseen. Then the Asshole gets the same offer — whatever the hold hand contains at that point.</li>
+          <li><strong>Round 2+:</strong> Before card trading, the President sees their own hand and may swap their entire hand for the hold hand, sight unseen. Then the Wiper gets the same offer — whatever the hold hand contains at that point.</li>
           <li>After both players decide, the hold hand is discarded and normal card trading begins.</li>
         </ul>
       </div>
@@ -280,7 +280,7 @@
   <div id="modal-start" class="modal">
     <div class="modal-box start-box">
       <h1 id="start-title">President</h1>
-      <p class="subtitle">aka Asshole</p>
+      <p class="subtitle">aka Wiper</p>
       <div class="start-options">
         <label>
           Players
