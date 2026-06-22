@@ -403,7 +403,7 @@ function scheduleAiIfNeeded() {
         render();
         if (state.phase === 'roundEnd') { showRoundEnd(); return; }
         scheduleAiIfNeeded();
-      }, 1800);
+      }, 1400);
     }
     return;
   }
