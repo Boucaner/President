@@ -722,10 +722,14 @@ function scoreRound() {
   const deltas = new Array(n).fill(0);
   state.finishOrder.forEach((playerIdx, pos) => {
     let d = 0;
-    if      (pos === 0)     d = 10;
-    else if (pos === 1)     d = 5;
-    else if (pos === n - 1) d = -1;
-    else if (pos === 2)     d = 1;
+    if (n === 2) {
+      d = pos === 0 ? 10 : 0;
+    } else {
+      if      (pos === 0)     d = 10;
+      else if (pos === 1)     d = 5;
+      else if (pos === n - 1) d = -1;
+      else if (pos === 2)     d = 1;
+    }
     state.players[playerIdx].scoreTotal = (state.players[playerIdx].scoreTotal || 0) + d;
     deltas[playerIdx] = d;
   });

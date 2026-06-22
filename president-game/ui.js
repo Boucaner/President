@@ -735,7 +735,7 @@ function updateConquestAvailability() {
   const numPlayers = parseInt($('start-players').value);
   const label = $('start-conquest-label');
   const cb    = $('start-conquest');
-  const tooFew = numPlayers < 3;
+  const tooFew = numPlayers < 2;
   cb.disabled = tooFew;
   label.style.opacity = tooFew ? '0.4' : '';
   if (tooFew) cb.checked = false;
