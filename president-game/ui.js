@@ -511,20 +511,14 @@ $('btn-roundend-deal').addEventListener('click', () => {
 });
 
 function showHoldExchangeModal() {
-  const hIdx = humanIdx();
-  const human = state.players[hIdx];
+  const human = state.players[humanIdx()];
   const holdCount = state.holdHand.length;
-  const step = state.holdExchange.currentStep;
   const isPresident = human.role === 'President';
 
-  $('hold-title').textContent = isPresident ? 'Hold Hand — President\'s Turn' : 'Hold Hand — Your Turn';
+  $('hold-title').textContent = isPresident ? 'Hold Hand — President\'s Choice' : 'Hold Hand — Your Choice';
   $('hold-desc').textContent  =
-    `The hold hand has ${holdCount} card${holdCount !== 1 ? 's' : ''} (sight unseen). ` +
-    `You may swap your entire hand for it, or keep what you have.`;
-
-  const cardsEl = $('hold-your-cards');
-  cardsEl.innerHTML = '';
-  human.hand.forEach(card => cardsEl.appendChild(buildCardEl(card, false)));
+    `The hold hand has ${holdCount} card${holdCount !== 1 ? 's' : ''}. ` +
+    `Swap your hand for it sight unseen, or keep what you have.`;
 
   const after = () => {
     $('modal-hold').classList.add('hidden');

@@ -542,26 +542,29 @@ html, body {
 #trading-received-cards,
 #trading-give-cards,
 #kitty-cards,
-#kitty-hand-cards,
-#hold-your-cards {
+#kitty-hand-cards {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-#hold-your-cards {
-  max-height: 38vh;
-  overflow-y: auto;
-}
-
 #trading-give-cards .card { cursor: pointer; }
 
 #modal-trading .modal-box,
-#modal-kitty .modal-box,
-#modal-hold .modal-box {
+#modal-kitty .modal-box {
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+/* Hold modal: lighter overlay + anchored to top so hand is visible below */
+#modal-hold {
+  background: rgba(0, 0, 0, 0.55);
+  align-items: flex-start;
+  padding-top: 24px;
+}
+#modal-hold .modal-box {
+  max-width: 360px;
 }
 
 #kitty-swap-info {
