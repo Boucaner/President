@@ -796,8 +796,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     if (lowestBeater) {
       // Breaking a pair/triple to follow a single is a style decision — only gate pileCount=1
       if (pileCount === 1 && lowestBeater.length > 1) {
-        if (style === 'conservative' && lowestBeater[0].rank < 10) return null; // K/A only
-        if (style === 'neutral'      && lowestBeater[0].rank <  8) return null; // J+ only
+        if (style === 'conservative' && lowestBeater[0].rank <  8) return null; // J+ only
+        if (style === 'neutral'      && lowestBeater[0].rank <  6) return null; // 9+ only
         // aggressive: always break and take the lead
       }
       return lowestBeater.slice(0, pileCount);
@@ -838,8 +838,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'middle' — balanced; minor refinements per style ───────────────
   if (style === 'conservative') {
     if (lowestBeater) {
-      // Breaking a pair to follow a single: only if K or A
-      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 10) return null;
+      // Breaking a pair to follow a single: only if J+
+      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 8) return null;
       // Don't sacrifice our only King or Ace when we have nothing else and won't go out
       if (playRank >= 10 && higherAfter === 0 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
@@ -849,8 +849,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   if (style === 'neutral') {
     if (lowestBeater) {
-      // Breaking a pair to follow a single: only if J or higher
-      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 8) return null;
+      // Breaking a pair to follow a single: only if 9+
+      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 6) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (twos.length > 0) return [twos[0]];

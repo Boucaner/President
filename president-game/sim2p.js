@@ -73,8 +73,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, is2P) {
   if (is2P) {
     if (lb) {
       if (wouldBreak()) {
-        if (style === 'conservative' && lb[0].rank < 10) return null;
-        if (style === 'neutral'      && lb[0].rank <  8) return null;
+        if (style === 'conservative' && lb[0].rank <  8) return null; // J+ only
+        if (style === 'neutral'      && lb[0].rank <  6) return null; // 9+ only
       }
       return lb.slice(0, pileCount);
     }
@@ -84,7 +84,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, is2P) {
   // 4+ player: style-differentiated
   if (style === 'conservative') {
     if (lb) {
-      if (wouldBreak() && lb[0].rank < 10) return null;
+      if (wouldBreak() && lb[0].rank < 8) return null; // J+ only
       return lb.slice(0, pileCount);
     }
     if (twos.length && pileRank >= 9) return [twos[0]];
@@ -92,7 +92,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, is2P) {
   }
   if (style === 'neutral') {
     if (lb) {
-      if (wouldBreak() && lb[0].rank < 8) return null;
+      if (wouldBreak() && lb[0].rank < 6) return null; // 9+ only
       return lb.slice(0, pileCount);
     }
     if (twos.length) return [twos[0]];
