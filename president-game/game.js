@@ -699,7 +699,19 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
       // 4+ player conservative/neutral: endgame then lead lowest
       if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
         return nonTwoGroups[nonTwoGroups.length - 1];
-      if (nonTwoGroups.length > 0) return nonTwoGroups[0];
+      if (nonTwoGroups.length > 0) {
+        const cand = nonTwoGroups[0];
+        if (cand.length >= 3 && cand[0].rank >= 5) {
+          const remaining = hand.length - cand.length;
+          const gate = style === 'conservative' ? 6 : 4;
+          if (remaining < gate) {
+            const singles = nonTwoGroups.filter(g => g.length === 1);
+            if (singles.length > 0) return [singles[0][0]];
+            return [cand[0]];
+          }
+        }
+        return cand;
+      }
     }
     if (twos.length > 0) return [twos[0]];
     return [hand[0]];
@@ -727,7 +739,19 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
   // conservative / neutral, middle: lead lowest group; use 2 as endgame insurance
   if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
     return nonTwoGroups[nonTwoGroups.length - 1];
-  if (nonTwoGroups.length > 0) return nonTwoGroups[0];
+  if (nonTwoGroups.length > 0) {
+    const cand = nonTwoGroups[0];
+    if (cand.length >= 3 && cand[0].rank >= 5) {
+      const remaining = hand.length - cand.length;
+      const gate = style === 'conservative' ? 6 : 4;
+      if (remaining < gate) {
+        const singles = nonTwoGroups.filter(g => g.length === 1);
+        if (singles.length > 0) return [singles[0][0]];
+        return [cand[0]];
+      }
+    }
+    return cand;
+  }
   if (twos.length > 0) return [twos[0]];
   return [hand[0]];
 }
@@ -765,6 +789,16 @@ function scoreRound() {
   return { deltas, conquestWinner };
 }
 
+// Probability that a given style will break a group (pair/triple) to follow a single.
+// Increases smoothly with the rank of the card being played — higher card, more worth it.
+function rollBreak(style, rank, pileRank) {
+  const base = style === 'aggressive' ? 0.90
+             : style === 'neutral'    ? Math.min(0.85, 0.10 + rank * 0.07)
+             :                          Math.min(0.65, 0.05 + rank * 0.05);
+  const pileAdj = (pileRank - 5) * 0.03;
+  return Math.random() < Math.min(0.95, Math.max(0.02, base + pileAdj));
+}
+
 function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed) {
   const beaters = nonTwoGroups
     .filter(g => g.length >= pileCount && g[0].rank > pileRank)
@@ -794,12 +828,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'top' — go out as fast as possible ─────────────────────────────
   if (target === 'top') {
     if (lowestBeater) {
-      // Breaking a pair/triple to follow a single is a style decision — only gate pileCount=1
-      if (pileCount === 1 && lowestBeater.length > 1) {
-        if (style === 'conservative' && lowestBeater[0].rank <  8) return null; // J+ only
-        if (style === 'neutral'      && lowestBeater[0].rank <  6) return null; // 9+ only
-        // aggressive: always break and take the lead
-      }
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (twos.length > 0) return [twos[0]];
@@ -838,8 +867,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'middle' — balanced; minor refinements per style ───────────────
   if (style === 'conservative') {
     if (lowestBeater) {
-      // Breaking a pair to follow a single: only if J+
-      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 8) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
       // Don't sacrifice our only King or Ace when we have nothing else and won't go out
       if (playRank >= 10 && higherAfter === 0 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
@@ -849,15 +877,17 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   if (style === 'neutral') {
     if (lowestBeater) {
-      // Breaking a pair to follow a single: only if 9+
-      if (pileCount === 1 && lowestBeater.length > 1 && lowestBeater[0].rank < 6) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (twos.length > 0) return [twos[0]];
     return null;
   }
-  // aggressive + middle: always beat, always break if needed
-  if (lowestBeater) return lowestBeater.slice(0, pileCount);
+  // aggressive + middle
+  if (lowestBeater) {
+    if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
+    return lowestBeater.slice(0, pileCount);
+  }
   if (twos.length > 0 && pileRank >= 7) return [twos[0]]; // 10+
   return null;
 }

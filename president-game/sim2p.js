@@ -1,6 +1,6 @@
 'use strict';
 // ── 2-Player President Simulation ─────────────────────────────────────────────
-// 100 games × 10 rounds, all 6 AI style matchups, with and without hold hand.
+// 1000 games × 10 rounds, all 6 AI style matchups, with and without hold hand.
 //
 // Cards: 52-card deck, ranks 3(0)–A(11)–2(12)
 // Hold hand: 3-way round-robin deal → hold=18 cards, each player=17 cards
@@ -62,29 +62,34 @@ function aiLead(nonTwoGroups, twos, hand, style, oppHandSize) {
   if (nonTwoGroups.length) return nonTwoGroups[0];
   return twos.length ? [twos[0]] : [hand[0]];
 }
+let _breakOffer = 0, _breakTaken = 0;
+function rollBreak(style, rank, pileRank) {
+  _breakOffer++;
+  const base = style === 'aggressive' ? 0.90
+             : style === 'neutral'    ? Math.min(0.85, 0.10 + rank * 0.07)
+             :                          Math.min(0.65, 0.05 + rank * 0.05);
+  const pileAdj = (pileRank - 5) * 0.03;
+  const result = Math.random() < Math.min(0.95, Math.max(0.02, base + pileAdj));
+  if (result) _breakTaken++;
+  return result;
+}
 function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, is2P) {
   const beaters = nonTwoGroups
     .filter(g => g.length >= pileCount && g[0].rank > pileRank)
     .sort((a,b) => a[0].rank-b[0].rank);
   const lb = beaters[0] || null;
-  // Breaking a pair/triple to follow a single is style-gated (pileCount===1 only)
   function wouldBreak() { return lb && pileCount === 1 && lb.length > 1; }
-  // 2-player: target='top' behavior, but style still gates group-breaking
   if (is2P) {
     if (lb) {
-      if (wouldBreak()) {
-        if (style === 'conservative' && lb[0].rank <  8) return null; // J+ only
-        if (style === 'neutral'      && lb[0].rank <  6) return null; // 9+ only
-      }
+      if (wouldBreak() && !rollBreak(style, lb[0].rank, pileRank)) return null;
       return lb.slice(0, pileCount);
     }
     if (twos.length) return [twos[0]];
     return null;
   }
-  // 4+ player: style-differentiated
   if (style === 'conservative') {
     if (lb) {
-      if (wouldBreak() && lb[0].rank < 8) return null; // J+ only
+      if (wouldBreak() && !rollBreak(style, lb[0].rank, pileRank)) return null;
       return lb.slice(0, pileCount);
     }
     if (twos.length && pileRank >= 9) return [twos[0]];
@@ -92,14 +97,17 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, is2P) {
   }
   if (style === 'neutral') {
     if (lb) {
-      if (wouldBreak() && lb[0].rank < 6) return null; // 9+ only
+      if (wouldBreak() && !rollBreak(style, lb[0].rank, pileRank)) return null;
       return lb.slice(0, pileCount);
     }
     if (twos.length) return [twos[0]];
     return null;
   }
-  // aggressive: always beat, always break
-  if (lb) return lb.slice(0, pileCount);
+  // aggressive: usually breaks, occasionally holds
+  if (lb) {
+    if (wouldBreak() && !rollBreak(style, lb[0].rank, pileRank)) return null;
+    return lb.slice(0, pileCount);
+  }
   if (twos.length && pileRank >= 7) return [twos[0]];
   return null;
 }
@@ -205,6 +213,7 @@ function doTrading(players, presIdx) {
 
 // ── Run simulation ─────────────────────────────────────────────────────────────
 function runSim(styleA, styleB, withHoldHand, games = 100, rounds = 10) {
+  _breakOffer = 0; _breakTaken = 0;
   const acc = {
     roundWins: [0, 0],
     gameWins:  [0, 0],
@@ -219,6 +228,8 @@ function runSim(styleA, styleB, withHoldHand, games = 100, rounds = 10) {
     presTradeBenefit: 0,  // net rank gain for President per trade
     wiperTradeLoss:   0,  // net rank loss for Wiper per trade
     tradeCount:       0,
+    breakOffer: 0,
+    breakTaken: 0,
   };
 
   for (let g = 0; g < games; g++) {
@@ -306,11 +317,13 @@ function runSim(styleA, styleB, withHoldHand, games = 100, rounds = 10) {
     else                                 acc.gameTies++;
   }
 
+  acc.breakOffer = _breakOffer;
+  acc.breakTaken = _breakTaken;
   return acc;
 }
 
 // ── Report ─────────────────────────────────────────────────────────────────────
-const GAMES  = 100;
+const GAMES  = 1000;
 const ROUNDS = 10;
 const PAIRS = [
   ['conservative', 'conservative'],
@@ -353,6 +366,8 @@ for (const [sA, sB] of PAIRS) {
   console.log(`│    Round win%  — P0(${sA.slice(0,4)}): ${String(no.roundWins[0]).padStart(4)}/${totalR} = ${pA_no}%    P1(${sB.slice(0,4)}): ${String(no.roundWins[1]).padStart(4)}/${totalR} = ${pB_no}%`);
   console.log(`│    Game wins   — P0: ${no.gameWins[0]}   P1: ${no.gameWins[1]}   Ties: ${no.gameTies}`);
   console.log(`│    President retains next round: ${ret_no}%`);
+  const bpct_no = no.breakOffer > 0 ? (no.breakTaken / no.breakOffer * 100).toFixed(1) : '—';
+  console.log(`│    Group-break — offered: ${no.breakOffer}  taken: ${no.breakTaken} (${bpct_no}%)`);
   if (no.tradeCount > 0) {
     const tb = (no.presTradeBenefit / no.tradeCount).toFixed(2);
     const tl = (no.wiperTradeLoss   / no.tradeCount).toFixed(2);
@@ -363,6 +378,8 @@ for (const [sA, sB] of PAIRS) {
   console.log(`│    Round win%  — P0(${sA.slice(0,4)}): ${String(hold.roundWins[0]).padStart(4)}/${totalR} = ${pA_hold}%    P1(${sB.slice(0,4)}): ${String(hold.roundWins[1]).padStart(4)}/${totalR} = ${pB_hold}%`);
   console.log(`│    Game wins   — P0: ${hold.gameWins[0]}   P1: ${hold.gameWins[1]}   Ties: ${hold.gameTies}`);
   console.log(`│    President retains next round: ${ret_hold}%`);
+  const bpct_hold = hold.breakOffer > 0 ? (hold.breakTaken / hold.breakOffer * 100).toFixed(1) : '—';
+  console.log(`│    Group-break — offered: ${hold.breakOffer}  taken: ${hold.breakTaken} (${bpct_hold}%)`);
   if (hold.tradeCount > 0) {
     const tb = (hold.presTradeBenefit / hold.tradeCount).toFixed(2);
     const tl = (hold.wiperTradeLoss   / hold.tradeCount).toFixed(2);
