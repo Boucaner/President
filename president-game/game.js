@@ -676,6 +676,12 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
   // Universal: exactly 2 cards left and one is a 2 — lead the 2 first; last card then plays uncontested
   if (hand.length === 2 && twos.length > 0 && nonTwoGroups.length > 0) return [twos[0]];
 
+  // Absolute (non-survive): if our only remaining non-2 group would leave just 2s after play,
+  // lead the 2 first — keeps non-2 cards as the exit play rather than risking a 2 as last card.
+  if (target !== 'survive' && twos.length > 0 && nonTwoGroups.length === 1) {
+    if (hand.length - nonTwoGroups[0].length === twos.length) return [twos[0]];
+  }
+
   if (target === 'top') {
     // If holding all remaining 2s, Aces can't be beaten — lead Ace to shed it safely in endgame
     if (iHoldAllTwos && hand.length <= 5) {
@@ -820,6 +826,12 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   if (!lowestBeater && twos.length > 0 && twos.length === handSize) {
     if (twos.length === pileCount) return twos;
     if (twos.length === 1) return [twos[0]]; // single 2 is always legal
+  }
+
+  // Absolute (non-survive): if playing our non-2 beater would leave just 2s, trump the pile
+  // with the 2 now and exit on the non-2 card(s) next turn instead.
+  if (target !== 'survive' && lowestBeater && twos.length >= pileCount && handSize - pileCount === twos.length) {
+    return twos.slice(0, pileCount);
   }
 
   // ── Target: 'top' — go out as fast as possible ─────────────────────────────
