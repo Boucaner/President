@@ -43,7 +43,7 @@ function renderGameName() {
   if (startTitle) startTitle.textContent = name;
 }
 
-console.log('%c[President] ui.js loaded — build 32', 'color:lime;font-weight:bold');
+console.log('%c[President] ui.js loaded — build 33', 'color:lime;font-weight:bold');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
@@ -568,7 +568,7 @@ function showKittyExchangeModal() {
 
   const kittyEl = $('kitty-cards');
   kittyEl.innerHTML = '';
-  kx.kitty.forEach(card => {
+  [...kx.kitty].sort((a, b) => a.rank - b.rank).forEach(card => {
     const el = buildCardEl(card, true);
     el.addEventListener('click', () => {
       const i = kittySelected.findIndex(c => c.suit === card.suit && c.value === card.value);
