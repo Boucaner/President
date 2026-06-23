@@ -809,14 +809,15 @@ function rollBreak(style, rank, pileRank, is2P) {
 
 // Probabilistic gate for playing a 2 as trump in 3+P games.
 // Weights hand size (endgame proximity), 2-count, and pile rank into a single probability.
-function rollTrump(twos, handSize, pileRank, style, target) {
-  const sizeScore = Math.max(0, Math.min(1, (12 - handSize) / 9));   // 0 at 12+ cards, 1 at ≤3
-  const twoScore  = Math.min(1, (twos.length - 1) / 2);              // 0 for 1 two, 1 for 3+
-  const rankScore = Math.max(0, Math.min(1, (pileRank - 6) / 5));    // 0 at rank 6, 1 at Ace
-  const styleAdj  = style  === 'aggressive' ? 0.10 : style === 'conservative' ? -0.10 : 0;
-  const targetAdj = target === 'top' ? 0.10 : 0;
+function rollTrump(twos, handSize, pileRank, style, target, twosStillOut) {
+  const sizeScore   = Math.max(0, Math.min(1, (12 - handSize) / 9));   // 0 at 12+ cards, 1 at ≤3
+  const twoScore    = Math.min(1, (twos.length - 1) / 2);              // 0 for 1 two, 1 for 3+
+  const rankScore   = Math.max(0, Math.min(1, (pileRank - 6) / 5));    // 0 at rank 6, 1 at Ace
+  const styleAdj    = style  === 'aggressive' ? 0.10 : style === 'conservative' ? -0.10 : 0;
+  const targetAdj   = target === 'top' ? 0.10 : 0;
+  const allTwosAdj  = twosStillOut === 0 ? 0.30 : twosStillOut === 1 ? 0.10 : 0;
   const prob = Math.min(0.93, Math.max(0.03,
-    sizeScore * 0.35 + twoScore * 0.30 + rankScore * 0.35 + styleAdj + targetAdj));
+    sizeScore * 0.35 + twoScore * 0.30 + rankScore * 0.35 + styleAdj + targetAdj + allTwosAdj));
   return Math.random() < prob;
 }
 
@@ -852,13 +853,20 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     return twos.slice(0, pileCount);
   }
 
+  // Clear going-out path: we hold all remaining 2s and our non-2 cards are exclusively Aces.
+  // After this trump, every card left wins (Aces unbeatable with no 2s remaining, plus any 2s).
+  if (!is2P && twosStillOut === 0 && twos.length >= pileCount && !lowestBeater) {
+    const nonTwoNonAce = hand.filter(c => c.value !== '2' && c.value !== 'A');
+    if (nonTwoNonAce.length === 0) return twos.slice(0, pileCount);
+  }
+
   // ── Target: 'top' — go out as fast as possible ─────────────────────────────
   if (target === 'top') {
     if (lowestBeater) {
       if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
       return lowestBeater.slice(0, pileCount);
     }
-    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target))) return [twos[0]];
+    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
 
@@ -867,13 +875,13 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     if (!lowestBeater) {
       // No non-trump beater; use 2 only on very high piles
       const twoEmergencyRank = style === 'conservative' ? 11 : 10; // A only / K+
-      if (twos.length > 0 && pileRank >= twoEmergencyRank && (is2P || rollTrump(twos, handSize, pileRank, style, target))) return [twos[0]];
+      if (twos.length > 0 && pileRank >= twoEmergencyRank && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
       return null;
     }
     // Never break a group for survive — preserve pairs/triples for reactive follow
     if (pileCount === 1 && lowestBeater.length > 1) {
       const twoThreshold = style === 'conservative' ? 11 : style === 'neutral' ? 10 : 9;
-      if (twos.length > 0 && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target))) return [twos[0]];
+      if (twos.length > 0 && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
       return null;
     }
     // Play only when cost is low: cheap card AND have something better in reserve
@@ -887,7 +895,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     const twoThreshold = style === 'conservative' ? 11  // A pile
                        : style === 'neutral'       ? 10  // K+
                        :                            9;   // Q+
-    if (twos.length > 0 && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target))) return [twos[0]];
+    if (twos.length > 0 && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
 
@@ -899,7 +907,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
       if (playRank >= 10 && higherAfter === 0 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
     }
-    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target))) return [twos[0]];
+    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
   if (style === 'neutral') {
@@ -907,7 +915,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
       if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
       return lowestBeater.slice(0, pileCount);
     }
-    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target))) return [twos[0]];
+    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
   // aggressive + middle
@@ -915,6 +923,6 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
     return lowestBeater.slice(0, pileCount);
   }
-  if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target))) return [twos[0]];
+  if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
   return null;
 }
