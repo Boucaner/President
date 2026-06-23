@@ -1,0 +1,246 @@
+PRESIDENT GAME — AI PLAYER BREAKDOWN
+Build 35
+================================================================================
+
+OVERVIEW
+--------
+Each AI player has two independent attributes:
+
+  STYLE      — assigned randomly at game start, stays fixed all game
+               conservative | neutral | aggressive
+
+  TARGET     — assigned each round based on role / how the game is going
+               top | middle | survive
+
+Style controls HOW a player plays (risk tolerance, card choices).
+Target controls WHAT they're playing toward (win fast, stay safe, avoid last).
+
+The combination of the two determines behavior in any given round.
+
+================================================================================
+THE THREE STYLES
+================================================================================
+
+CONSERVATIVE
+------------
+Leading:
+  - Sheds lowest single cards first to clear junk from hand
+  - Only leads a 3+ card group (trips, quads) 25% of the time —
+    the other 75% it breaks the group and leads a single instead
+  - In endgame (≤4 cards with a 2 in hand): leads highest non-trump
+    to preserve 2 as a finisher
+
+Following (when responding to a pile):
+  - Will play its lowest beater, but reluctant to break a pair/triple
+    to follow a single — probability of doing so starts very low (~5%)
+    and rises slowly with the rank of the card (~0.05 per rank step,
+    cap 65%)
+  - Will not sacrifice its only King or Ace if it has no backup card
+  - Won't use a 2 as trump unless rollTrump says yes (with -0.10 adj,
+    meaning it needs stronger conditions: near endgame, high pile, or
+    multiple 2s)
+
+2-player follow: higher break-probability floors (40–75%) since
+  passing hands control directly to the one opponent.
+
+NEUTRAL
+-------
+Leading:
+  - Same low-first shedding as conservative
+  - Leads a 3+ card group 55% of the time (more open to it)
+  - Same endgame finisher behavior
+
+Following:
+  - More willing to break groups: probability starts low (~10%) but
+    climbs faster with rank (~0.07 per step, cap 85%)
+  - Will use a 2 as trump when rollTrump says yes (no style adjustment)
+
+2-player follow: higher floors (60–88%).
+
+AGGRESSIVE
+----------
+Leading:
+  - Always leads the largest group of its cheapest cards — tries to
+    empty the hand as fast as possible
+  - No rollLeadGroup check; always commits to the full group
+
+Following:
+  - 90% flat chance to break any group to follow a single (2P: 92%)
+    adjusted slightly upward for high piles, downward for low piles
+  - Pile rank nudges the probability ±0.02–0.03 per rank step
+  - Uses 2 as trump more readily (+0.10 rollTrump adjustment)
+
+2-player follow: 92% base, pile-adjusted.
+
+================================================================================
+THE THREE TARGETS
+================================================================================
+
+TOP — Racing to go out first
+-----------------------------
+This is the role for players who won last round (President, VP).
+
+Leading:
+  - If holding all remaining 2s and ≤5 cards: leads an Ace first
+    (Ace is unbeatable in that state — shed it safely)
+  - Aggressive style: leads biggest group of cheapest cards every time
+  - Conservative/neutral: leads lowest group, occasional singles
+  - 2P-specific: chips away with lowest singles, pressure-leads high
+    singles when opponent has ≤3 cards
+
+Following:
+  - Always plays its lowest beater if it has one
+  - Will break a pair/triple for a single according to rollBreak
+    (aggressive = almost always; conservative/neutral = rank-dependent)
+  - No restriction on using a 2 as trump — goes through rollTrump
+    with a +0.10 bonus for being in 'top' mode
+
+Absolute rules that override everything:
+  - If playing a non-2 beater would leave only 2s in hand, use the 2
+    NOW instead (so the non-2 can be the exit play)
+  - If holding all remaining 2s and only Aces are left after trumping:
+    always play — guaranteed going-out sequence
+
+MIDDLE — Balanced play
+-----------------------
+This is the default for neutral-position players.
+
+Leading:
+  - Aggressive: same as aggressive+top — leads biggest group of cheapest
+  - Conservative/neutral: low-first shedding with probabilistic group-leading
+
+Following:
+  - Conservative: plays lowest beater; skips if card is one of top two ranks in hand with no backup;
+    rollTrump with -0.10 adjustment for 2-trump decisions
+  - Neutral: plays lowest beater; rollTrump with no adjustment
+  - Aggressive: plays lowest beater; rollTrump with +0.10 adjustment
+  - All styles subject to rollBreak for group-break decisions
+
+SURVIVE — Avoid being last
+---------------------------
+This is the mode for players at risk of finishing last (Wiper, VP Wiper).
+
+Leading:
+  - Leads only the lowest single card available — shed junk, hide hand size
+  - If no singles: reluctantly leads one card from the smallest group,
+    does NOT commit the whole group
+  - Very rarely leads a 2
+
+Following:
+  - Never breaks a pair/triple to follow a single — will 2-trump instead
+    if the pile is high enough (conservative: Ace only; neutral: King+;
+    aggressive: Queen+), AND rollTrump says yes
+  - Will only play its lowest beater if:
+      (a) it's cheap enough (rank ≤ 9 conservative / ≤ J neutral / ≤ Q aggressive)
+      AND
+      (b) it has at least one higher non-trump card in reserve
+  - If no 2s are left in opponents' hands, that threshold rises to Ace-only
+    (since high cards are now safer to hold — they can't be trumped)
+  - Emergency 2-trump: if no non-trump beater exists, will use 2 only on
+    very high piles (Ace for conservative, King+ for neutral/aggressive),
+    and only if rollTrump agrees
+
+================================================================================
+UNIVERSAL RULES (override everything, always applied first)
+================================================================================
+
+1. GO-OUT PLAY
+   If the beater exactly empties the hand — always play it, no conditions.
+
+2. ALL-2S REMAINING
+   If all remaining cards in hand are 2s — play them out.
+   (Single 2 case: a single 2 is always legal to play as trump.)
+
+3. NEVER-LAST-2 (non-survive players only)
+   If playing a non-2 beater would leave only 2s in hand, use the 2 instead.
+   The non-2 card(s) then become the final exit play next turn.
+   Applies in both leading and following.
+
+4. CLEAR GOING-OUT PATH (3+P only)
+   If the player holds ALL remaining unplayed 2s, AND after trumping, the
+   only cards left are Aces and/or more 2s — always trump. This is a
+   guaranteed going-out sequence (Aces are unbeatable when no 2s remain).
+
+================================================================================
+PROBABILITY FUNCTIONS
+================================================================================
+
+rollBreak(style, rank, pileRank, is2P)
+  Called when the AI's only beater for a single is a pair or triple.
+  Returns true = break the group and play; false = pass instead.
+
+  4P probabilities:
+    aggressive:   90% flat (pile-adjusted)
+    neutral:      10% + rank×7%, cap 85%
+    conservative:  5% + rank×5%, cap 65%
+  2P probabilities (higher floors — no other player to share lead burden):
+    aggressive:   92% flat
+    neutral:      60% + rank×2.5%, cap 88%
+    conservative: 40% + rank×3%, cap 75%
+  Pile rank adjustment: ±0.02 (2P) or ±0.03 (4P) per rank step from rank 5
+
+rollLeadGroup(style)
+  Called when the AI is about to lead a 3+ card group.
+  Returns true = commit the full group; false = lead a single instead.
+
+    neutral:      55% chance to lead the group
+    conservative: 25% chance to lead the group
+    aggressive:   always leads the group (not called)
+
+rollTrump(twos, handSize, pileRank, style, target, twosStillOut)
+  Called when the AI has no non-trump beater and is considering playing a 2.
+  3+P only — 2P bypasses this and plays 2 more freely.
+
+  Three weighted factors (each 0–1):
+    sizeScore  — 0 at 12+ cards in hand, 1.0 at ≤3 cards (endgame proximity)
+    twoScore   — 0 for 1 two in hand, 1.0 for 3+ (can afford to spend one)
+    rankScore  — 0 at rank 6 pile, 1.0 at Ace pile (pile worth contesting)
+
+  Base probability = sizeScore×0.35 + twoScore×0.30 + rankScore×0.35
+
+  Adjustments:
+    style aggressive:  +0.10
+    style conservative: -0.10
+    target top:        +0.10
+    twosStillOut = 0:  +0.30  (I hold the last trump — Aces now unbeatable)
+    twosStillOut = 1:  +0.10  (one 2 still out — position still strong)
+
+  Clamped to [3%, 93%]
+
+  Example probabilities (neutral, middle target):
+    15 cards, 1 two,  pile=7 (Ten):  ~10%  — early, can't spare the trump
+    15 cards, 3 twos, pile=11 (Ace): ~41%  — have spares, pile worth it
+     6 cards, 1 two,  pile=11 (Ace): ~52%  — near endgame, high pile
+     4 cards, 2 twos, pile=10 (K):   ~72%  — close to out, strong position
+     any,     hold all 2s, Ace pile:  +0.30 on top of base
+
+================================================================================
+2-PLAYER SPECIFIC BEHAVIOR
+================================================================================
+
+In 2P mode, the aiLead function has a unified strategy regardless of style:
+
+  Normal: chip away with lowest singles — preserve groups for endgame
+  Endgame (≤4 cards with a 2): lead highest non-trump, keep 2 as finisher
+  Pressure (opponent ≤3 cards): lead high single to deny their exit
+  No singles: break lowest group, lead one card, save rest for reactive follow
+
+rollBreak uses the 2P floors (see above) — AI is much less likely to pass.
+rollTrump is bypassed entirely — 2P AI plays 2s through the standard
+  target logic without the extra hand-size/pile-rank gating.
+
+================================================================================
+CARD TRACKING
+================================================================================
+
+The AI tracks valuePlayed — a count of each card value played this round.
+This is used for:
+
+  iHoldAllTwos — true when the AI holds all remaining unplayed 2s.
+    Used in aiLead to safely lead Aces and in the clear-path check.
+
+  twosStillOut — how many 2s are still in opponents' hands.
+    Used in aiFollow survive logic (raises safe-play threshold when 0)
+    and as a major signal in rollTrump.
+
+================================================================================

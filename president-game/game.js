@@ -903,8 +903,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   if (style === 'conservative') {
     if (lowestBeater) {
       if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
-      // Don't sacrifice our only King or Ace when we have nothing else and won't go out
-      if (playRank >= 10 && higherAfter === 0 && handSize > pileCount + 1) return null;
+      // Don't sacrifice either of our top two ranks when nothing better is in reserve
+      if (higherAfter <= 1 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
