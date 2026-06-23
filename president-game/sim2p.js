@@ -65,10 +65,10 @@ function aiLead(nonTwoGroups, twos, hand, style, oppHandSize) {
 let _breakOffer = 0, _breakTaken = 0;
 function rollBreak(style, rank, pileRank) {
   _breakOffer++;
-  const base = style === 'aggressive' ? 0.90
-             : style === 'neutral'    ? Math.min(0.85, 0.10 + rank * 0.07)
-             :                          Math.min(0.65, 0.05 + rank * 0.05);
-  const pileAdj = (pileRank - 5) * 0.03;
+  const base = style === 'aggressive' ? 0.92
+             : style === 'neutral'    ? Math.min(0.88, 0.60 + rank * 0.025)
+             :                          Math.min(0.75, 0.40 + rank * 0.03);
+  const pileAdj = (pileRank - 5) * 0.02;
   const result = Math.random() < Math.min(0.95, Math.max(0.02, base + pileAdj));
   if (result) _breakTaken++;
   return result;

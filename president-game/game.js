@@ -659,9 +659,10 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize) {
   const twosPlayed  = valuePlayed['2'] || 0;
   const iHoldAllTwos = twos.length > 0 && twos.length >= (4 - twosPlayed);
 
+  const is2P = oppHandSize !== undefined;
   return pileCount === 0
     ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize)
-    : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed);
+    : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P);
 }
 
 // Probability that conservative/neutral leads a full 3+ card group vs. shedding a single instead.
@@ -794,15 +795,19 @@ function scoreRound() {
 
 // Probability that a given style will break a group (pair/triple) to follow a single.
 // Increases smoothly with the rank of the card being played — higher card, more worth it.
-function rollBreak(style, rank, pileRank) {
-  const base = style === 'aggressive' ? 0.90
-             : style === 'neutral'    ? Math.min(0.85, 0.10 + rank * 0.07)
-             :                          Math.min(0.65, 0.05 + rank * 0.05);
-  const pileAdj = (pileRank - 5) * 0.03;
+function rollBreak(style, rank, pileRank, is2P) {
+  const base = is2P
+    ? (style === 'aggressive' ? 0.92
+       : style === 'neutral'  ? Math.min(0.88, 0.60 + rank * 0.025)
+       :                        Math.min(0.75, 0.40 + rank * 0.03))
+    : (style === 'aggressive' ? 0.90
+       : style === 'neutral'  ? Math.min(0.85, 0.10 + rank * 0.07)
+       :                        Math.min(0.65, 0.05 + rank * 0.05));
+  const pileAdj = (pileRank - 5) * (is2P ? 0.02 : 0.03);
   return Math.random() < Math.min(0.95, Math.max(0.02, base + pileAdj));
 }
 
-function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed) {
+function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P) {
   const beaters = nonTwoGroups
     .filter(g => g.length >= pileCount && g[0].rank > pileRank)
     .sort((a, b) => a[0].rank - b[0].rank);
@@ -837,7 +842,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'top' — go out as fast as possible ─────────────────────────────
   if (target === 'top') {
     if (lowestBeater) {
-      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (twos.length > 0) return [twos[0]];
@@ -876,7 +881,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'middle' — balanced; minor refinements per style ───────────────
   if (style === 'conservative') {
     if (lowestBeater) {
-      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
       // Don't sacrifice our only King or Ace when we have nothing else and won't go out
       if (playRank >= 10 && higherAfter === 0 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
@@ -886,7 +891,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   if (style === 'neutral') {
     if (lowestBeater) {
-      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (twos.length > 0) return [twos[0]];
@@ -894,7 +899,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   // aggressive + middle
   if (lowestBeater) {
-    if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank)) return null;
+    if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
     return lowestBeater.slice(0, pileCount);
   }
   if (twos.length > 0 && pileRank >= 7) return [twos[0]]; // 10+
