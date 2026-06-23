@@ -664,6 +664,11 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize) {
     : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed);
 }
 
+// Probability that conservative/neutral leads a full 3+ card group vs. shedding a single instead.
+function rollLeadGroup(style) {
+  return Math.random() < (style === 'neutral' ? 0.55 : 0.25);
+}
+
 function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize) {
   // Universal: only 2s remain — lead them all
   if (nonTwoGroups.length === 0 && twos.length > 0) return twos;
@@ -699,7 +704,15 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
       // 4+ player conservative/neutral: endgame then lead lowest
       if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
         return nonTwoGroups[nonTwoGroups.length - 1];
-      if (nonTwoGroups.length > 0) return nonTwoGroups[0];
+      if (nonTwoGroups.length > 0) {
+        const cand = nonTwoGroups[0];
+        if (cand.length >= 3 && !rollLeadGroup(style)) {
+          const singles = nonTwoGroups.filter(g => g.length === 1);
+          if (singles.length > 0) return [singles[0][0]];
+          return [cand[0]];
+        }
+        return cand;
+      }
     }
     if (twos.length > 0) return [twos[0]];
     return [hand[0]];
@@ -727,7 +740,15 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
   // conservative / neutral, middle: lead lowest group; use 2 as endgame insurance
   if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
     return nonTwoGroups[nonTwoGroups.length - 1];
-  if (nonTwoGroups.length > 0) return nonTwoGroups[0];
+  if (nonTwoGroups.length > 0) {
+    const cand = nonTwoGroups[0];
+    if (cand.length >= 3 && !rollLeadGroup(style)) {
+      const singles = nonTwoGroups.filter(g => g.length === 1);
+      if (singles.length > 0) return [singles[0][0]];
+      return [cand[0]];
+    }
+    return cand;
+  }
   if (twos.length > 0) return [twos[0]];
   return [hand[0]];
 }
