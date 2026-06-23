@@ -699,19 +699,7 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
       // 4+ player conservative/neutral: endgame then lead lowest
       if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
         return nonTwoGroups[nonTwoGroups.length - 1];
-      if (nonTwoGroups.length > 0) {
-        const cand = nonTwoGroups[0];
-        if (cand.length >= 3 && cand[0].rank >= 5) {
-          const remaining = hand.length - cand.length;
-          const gate = style === 'conservative' ? 6 : 4;
-          if (remaining < gate) {
-            const singles = nonTwoGroups.filter(g => g.length === 1);
-            if (singles.length > 0) return [singles[0][0]];
-            return [cand[0]];
-          }
-        }
-        return cand;
-      }
+      if (nonTwoGroups.length > 0) return nonTwoGroups[0];
     }
     if (twos.length > 0) return [twos[0]];
     return [hand[0]];
@@ -739,19 +727,7 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
   // conservative / neutral, middle: lead lowest group; use 2 as endgame insurance
   if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
     return nonTwoGroups[nonTwoGroups.length - 1];
-  if (nonTwoGroups.length > 0) {
-    const cand = nonTwoGroups[0];
-    if (cand.length >= 3 && cand[0].rank >= 5) {
-      const remaining = hand.length - cand.length;
-      const gate = style === 'conservative' ? 6 : 4;
-      if (remaining < gate) {
-        const singles = nonTwoGroups.filter(g => g.length === 1);
-        if (singles.length > 0) return [singles[0][0]];
-        return [cand[0]];
-      }
-    }
-    return cand;
-  }
+  if (nonTwoGroups.length > 0) return nonTwoGroups[0];
   if (twos.length > 0) return [twos[0]];
   return [hand[0]];
 }
