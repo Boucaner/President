@@ -716,6 +716,10 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
       if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
         return nonTwoGroups[nonTwoGroups.length - 1];
       if (nonTwoGroups.length > 0) {
+        // Depletion tactic: lead a low pair (3-T) to force opponents to burn higher pairs
+        const deplPairs = nonTwoGroups.filter(g => g.length === 2 && g[0].rank <= 7);
+        const hasSingles = nonTwoGroups.some(g => g.length === 1);
+        if (deplPairs.length > 0 && hasSingles) return deplPairs[0];
         const cand = nonTwoGroups[0];
         if (cand.length >= 3 && !rollLeadGroup(style, target)) {
           const singles = nonTwoGroups.filter(g => g.length === 1);
@@ -752,6 +756,10 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
   if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
     return nonTwoGroups[nonTwoGroups.length - 1];
   if (nonTwoGroups.length > 0) {
+    // Depletion tactic: lead a low pair (3-T) to force opponents to burn higher pairs
+    const deplPairs = nonTwoGroups.filter(g => g.length === 2 && g[0].rank <= 7);
+    const hasSingles = nonTwoGroups.some(g => g.length === 1);
+    if (deplPairs.length > 0 && hasSingles && Math.random() < 0.55) return deplPairs[0];
     const cand = nonTwoGroups[0];
     if (cand.length >= 3 && !rollLeadGroup(style, target)) {
       const singles = nonTwoGroups.filter(g => g.length === 1);

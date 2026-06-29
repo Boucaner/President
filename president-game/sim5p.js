@@ -89,6 +89,9 @@ function aiLead(nonTwoGroups,twos,hand,style,target,iHoldAllTwos){
       if(bc.length>0)return bc[0];
     }else{
       if(nonTwoGroups.length>0){
+        const dp=nonTwoGroups.filter(g=>g.length===2&&g[0].rank<=7);
+        const hs=nonTwoGroups.some(g=>g.length===1);
+        if(dp.length>0&&hs)return dp[0];
         const c=nonTwoGroups[0];
         if(c.length>=3&&!rollLeadGroup(style,target)){
           const sg=nonTwoGroups.filter(g=>g.length===1);
@@ -117,6 +120,9 @@ function aiLead(nonTwoGroups,twos,hand,style,target,iHoldAllTwos){
   }
   if(twos.length>0&&hand.length<=4&&nonTwoGroups.length>0)return nonTwoGroups[nonTwoGroups.length-1];
   if(nonTwoGroups.length>0){
+    const dp=nonTwoGroups.filter(g=>g.length===2&&g[0].rank<=7);
+    const hs=nonTwoGroups.some(g=>g.length===1);
+    if(dp.length>0&&hs&&Math.random()<0.55)return dp[0];
     const c=nonTwoGroups[0];
     if(c.length>=3&&!rollLeadGroup(style,target)){
       const sg=nonTwoGroups.filter(g=>g.length===1);
