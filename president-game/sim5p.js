@@ -50,9 +50,10 @@ function getTarget(player) {
 // ── AI helpers (Build 37) ─────────────────────────────────────────────────────
 function rollLeadGroup(style) { return Math.random()<(style==='neutral'?0.55:0.25); }
 
-function rollBreak(style, rank, pileRank) {
+function rollBreak(style, rank, pileRank, target) {
   const base = style==='aggressive'?0.90
              : style==='neutral'   ?Math.min(0.85,0.10+rank*0.07)
+             : target==='top'      ?Math.min(0.78,0.12+rank*0.06)
              :                      Math.min(0.65,0.05+rank*0.05);
   const pileAdj = (pileRank-5)*0.03;
   return Math.random()<Math.min(0.95,Math.max(0.02,base+pileAdj));
@@ -170,7 +171,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
 
   if (target==='top') {
     if (lowestBeater) {
-      if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank)) return null;
+      if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank,target)) return null;
       return lowestBeater.slice(0,pileCount);
     }
     if (canTrump&&rollTrump(twos,handSize,pileRank,style,target,twosStillOut)) return [twos[0]];
@@ -197,8 +198,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // middle
   if (style==='conservative') {
     if (lowestBeater) {
-      if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank)) return null;
-      if (higherAfter<=1&&handSize>pileCount+1) return null;
+      if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank,target)) return null;
+      if (higherAfter===0&&handSize>pileCount+1) return null;
       return lowestBeater.slice(0,pileCount);
     }
     if (canTrump&&rollTrump(twos,handSize,pileRank,style,target,twosStillOut)) return [twos[0]];
@@ -206,7 +207,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   if (style==='neutral') {
     if (lowestBeater) {
-      if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank)) return null;
+      if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank,target)) return null;
       return lowestBeater.slice(0,pileCount);
     }
     if (canTrump&&rollTrump(twos,handSize,pileRank,style,target,twosStillOut)) return [twos[0]];
@@ -214,7 +215,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   // aggressive + middle
   if (lowestBeater) {
-    if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank)) return null;
+    if (pileCount===1&&lowestBeater.length>1&&!rollBreak(style,lowestBeater[0].rank,pileRank,target)) return null;
     return lowestBeater.slice(0,pileCount);
   }
   if (canTrump&&rollTrump(twos,handSize,pileRank,style,target,twosStillOut)) return [twos[0]];

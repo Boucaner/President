@@ -796,13 +796,14 @@ function scoreRound() {
 
 // Probability that a given style will break a group (pair/triple) to follow a single.
 // Increases smoothly with the rank of the card being played — higher card, more worth it.
-function rollBreak(style, rank, pileRank, is2P) {
+function rollBreak(style, rank, pileRank, is2P, target) {
   const base = is2P
     ? (style === 'aggressive' ? 0.92
        : style === 'neutral'  ? Math.min(0.88, 0.60 + rank * 0.025)
        :                        Math.min(0.75, 0.40 + rank * 0.03))
     : (style === 'aggressive' ? 0.90
        : style === 'neutral'  ? Math.min(0.85, 0.10 + rank * 0.07)
+       : target === 'top'     ? Math.min(0.78, 0.12 + rank * 0.06)  // strong hand — play it
        :                        Math.min(0.65, 0.05 + rank * 0.05));
   const pileAdj = (pileRank - 5) * (is2P ? 0.02 : 0.03);
   return Math.random() < Math.min(0.95, Math.max(0.02, base + pileAdj));
@@ -891,7 +892,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'top' — go out as fast as possible ─────────────────────────────
   if (target === 'top') {
     if (lowestBeater) {
-      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P, target)) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
@@ -930,9 +931,9 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // ── Target: 'middle' — balanced; minor refinements per style ───────────────
   if (style === 'conservative') {
     if (lowestBeater) {
-      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
-      // Don't sacrifice either of our top two ranks when nothing better is in reserve
-      if (higherAfter <= 1 && handSize > pileCount + 1) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P, target)) return null;
+      // Only hold back when there's truly no stronger card in reserve
+      if (higherAfter === 0 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
@@ -940,7 +941,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   if (style === 'neutral') {
     if (lowestBeater) {
-      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
+      if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P, target)) return null;
       return lowestBeater.slice(0, pileCount);
     }
     if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
@@ -948,7 +949,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   }
   // aggressive + middle
   if (lowestBeater) {
-    if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
+    if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P, target)) return null;
     return lowestBeater.slice(0, pileCount);
   }
   if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
