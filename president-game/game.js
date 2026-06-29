@@ -667,8 +667,11 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leade
 }
 
 // Probability that conservative/neutral leads a full 3+ card group vs. shedding a single instead.
-function rollLeadGroup(style) {
-  return Math.random() < (style === 'neutral' ? 0.55 : 0.25);
+function rollLeadGroup(style, target) {
+  const p = style === 'neutral'
+    ? (target === 'top' ? 0.72 : 0.55)
+    : (target === 'top' ? 0.48 : 0.25);
+  return Math.random() < p;
 }
 
 function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize) {
@@ -714,7 +717,7 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
         return nonTwoGroups[nonTwoGroups.length - 1];
       if (nonTwoGroups.length > 0) {
         const cand = nonTwoGroups[0];
-        if (cand.length >= 3 && !rollLeadGroup(style)) {
+        if (cand.length >= 3 && !rollLeadGroup(style, target)) {
           const singles = nonTwoGroups.filter(g => g.length === 1);
           if (singles.length > 0) return [singles[0][0]];
           return [cand[0]];
@@ -750,7 +753,7 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
     return nonTwoGroups[nonTwoGroups.length - 1];
   if (nonTwoGroups.length > 0) {
     const cand = nonTwoGroups[0];
-    if (cand.length >= 3 && !rollLeadGroup(style)) {
+    if (cand.length >= 3 && !rollLeadGroup(style, target)) {
       const singles = nonTwoGroups.filter(g => g.length === 1);
       if (singles.length > 0) return [singles[0][0]];
       return [cand[0]];
