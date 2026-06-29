@@ -629,7 +629,8 @@ function aiTakeTurn(playerIdx) {
   }
 
   const opp = state.players.length === 2 ? state.players.find(p => p !== player) : null;
-  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed, opp ? opp.hand.length : undefined);
+  const leaderHandSize = state.pile.length > 0 ? state.players[state.lastPlayedBy].hand.length : undefined;
+  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed, opp ? opp.hand.length : undefined, leaderHandSize);
   if (play) {
     applyPlay(playerIdx, play);
     return { action: 'play', cards: play };
@@ -639,7 +640,7 @@ function aiTakeTurn(playerIdx) {
   }
 }
 
-function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize) {
+function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leaderHandSize) {
   const pileCount = pile.length;
   const pileRank  = pileCount > 0 ? pile[0].rank : -1;
 
@@ -662,7 +663,7 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize) {
   const is2P = oppHandSize !== undefined;
   return pileCount === 0
     ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize)
-    : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P);
+    : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P, leaderHandSize);
 }
 
 // Probability that conservative/neutral leads a full 3+ card group vs. shedding a single instead.
@@ -821,7 +822,7 @@ function rollTrump(twos, handSize, pileRank, style, target, twosStillOut) {
   return Math.random() < prob;
 }
 
-function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P) {
+function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P, leaderHandSize) {
   const beaters = nonTwoGroups
     .filter(g => g.length >= pileCount && g[0].rank > pileRank)
     .sort((a, b) => a[0].rank - b[0].rank);
@@ -838,6 +839,22 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
   // 2s still in opponents' hands (unplayed and not in my hand)
   const twosStillOut = (4 - (valuePlayed['2'] || 0)) - twos.length;
 
+  // Is this pile card only beatable by a 2? True when every higher non-trump rank is exhausted.
+  // e.g. an Ace is always only-trumpable; a King becomes only-trumpable once all Aces are gone.
+  const pileOnlyTrumpable = (() => {
+    for (let r = pileRank + 1; r <= 11; r++) {
+      if ((valuePlayed[VALUES[r]] || 0) < 4) return false;
+    }
+    return true;
+  })();
+
+  // Pile leader has ≤3 cards and just played the ceiling card — they almost certainly hold a 2
+  // to exit with. Spending ours now without going out hands them the trick and achieves nothing.
+  const leaderLikelyHas2 = !is2P
+    && leaderHandSize !== undefined
+    && leaderHandSize <= 3
+    && pileOnlyTrumpable;
+
   // ── Universal go-out checks ────────────────────────────────────────────────
   // Playing these cards empties our hand entirely — always take it
   if (lowestBeater && handSize === pileCount) return lowestBeater.slice(0, pileCount);
@@ -849,7 +866,8 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
 
   // Absolute (non-survive): if playing our non-2 beater would leave just 2s, trump the pile
   // with the 2 now and exit on the non-2 card(s) next turn instead.
-  if (target !== 'survive' && lowestBeater && twos.length >= pileCount && handSize - pileCount === twos.length) {
+  // Skip if the leader likely has a 2 too — they'll just trump our next lead and exit anyway.
+  if (!leaderLikelyHas2 && target !== 'survive' && lowestBeater && twos.length >= pileCount && handSize - pileCount === twos.length) {
     return twos.slice(0, pileCount);
   }
 
@@ -860,13 +878,16 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     if (nonTwoNonAce.length === 0) return twos.slice(0, pileCount);
   }
 
+  // Helper: should we voluntarily spend a 2 here?
+  const canTrump = twos.length > 0 && !leaderLikelyHas2;
+
   // ── Target: 'top' — go out as fast as possible ─────────────────────────────
   if (target === 'top') {
     if (lowestBeater) {
       if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
       return lowestBeater.slice(0, pileCount);
     }
-    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
+    if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
 
@@ -875,13 +896,13 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     if (!lowestBeater) {
       // No non-trump beater; use 2 only on very high piles
       const twoEmergencyRank = style === 'conservative' ? 11 : 10; // A only / K+
-      if (twos.length > 0 && pileRank >= twoEmergencyRank && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
+      if (canTrump && pileRank >= twoEmergencyRank && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
       return null;
     }
     // Never break a group for survive — preserve pairs/triples for reactive follow
     if (pileCount === 1 && lowestBeater.length > 1) {
       const twoThreshold = style === 'conservative' ? 11 : style === 'neutral' ? 10 : 9;
-      if (twos.length > 0 && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
+      if (canTrump && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
       return null;
     }
     // Play only when cost is low: cheap card AND have something better in reserve
@@ -895,7 +916,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     const twoThreshold = style === 'conservative' ? 11  // A pile
                        : style === 'neutral'       ? 10  // K+
                        :                            9;   // Q+
-    if (twos.length > 0 && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
+    if (canTrump && pileRank >= twoThreshold && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
 
@@ -907,7 +928,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
       if (higherAfter <= 1 && handSize > pileCount + 1) return null;
       return lowestBeater.slice(0, pileCount);
     }
-    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
+    if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
   if (style === 'neutral') {
@@ -915,7 +936,7 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
       if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
       return lowestBeater.slice(0, pileCount);
     }
-    if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
+    if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
     return null;
   }
   // aggressive + middle
@@ -923,6 +944,6 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     if (pileCount === 1 && lowestBeater.length > 1 && !rollBreak(style, lowestBeater[0].rank, pileRank, is2P)) return null;
     return lowestBeater.slice(0, pileCount);
   }
-  if (twos.length > 0 && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
+  if (canTrump && (is2P || rollTrump(twos, handSize, pileRank, style, target, twosStillOut))) return [twos[0]];
   return null;
 }
