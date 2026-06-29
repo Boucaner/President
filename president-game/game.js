@@ -848,12 +848,19 @@ function aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, 
     return true;
   })();
 
-  // Pile leader has ≤3 cards and just played the ceiling card — they almost certainly hold a 2
-  // to exit with. Spending ours now without going out hands them the trick and achieves nothing.
-  const leaderLikelyHas2 = !is2P
-    && leaderHandSize !== undefined
-    && leaderHandSize <= 3
-    && pileOnlyTrumpable;
+  // Pile leader played the ceiling card with very few cards left — they may hold a 2 to exit.
+  // Probability scales with how few cards they have (fewer = more certain it's a 2),
+  // and with style (aggressive players call the bluff more often).
+  const leaderLikelyHas2 = (() => {
+    if (is2P || leaderHandSize === undefined || !pileOnlyTrumpable) return false;
+    const baseProb = leaderHandSize === 1 ? 0.82
+                   : leaderHandSize === 2 ? 0.58
+                   : leaderHandSize <= 4  ? 0.32
+                   : 0;
+    if (baseProb === 0) return false;
+    const styleOffset = style === 'aggressive' ? -0.12 : style === 'conservative' ? 0.10 : 0;
+    return Math.random() < Math.min(0.93, Math.max(0, baseProb + styleOffset));
+  })();
 
   // ── Universal go-out checks ────────────────────────────────────────────────
   // Playing these cards empties our hand entirely — always take it
