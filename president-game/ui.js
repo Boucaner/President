@@ -195,7 +195,7 @@ function renderSeats() {
 
     const nameRow = document.createElement('div');
     nameRow.style.cssText = 'display:flex;align-items:center;gap:4px;';
-    if (state.pile.length > 0 && state.trickLeader === playerIdx) {
+    if (state.phase === 'playing' && state.trickLeader === playerIdx) {
       const starEl = document.createElement('span');
       starEl.className = 'trick-leader-star';
       starEl.textContent = '★';
@@ -352,7 +352,7 @@ function renderPlayerInfo() {
   elPlayerRole.textContent = displayRoleName(human.role);
   elPlayerRole.className = 'role-badge ' + roleClass(human.role);
   const hIdx = state.players.indexOf(human);
-  $('player-trick-star').textContent = (state.pile.length > 0 && state.trickLeader === hIdx) ? '★' : '';
+  $('player-trick-star').textContent = (state.phase === 'playing' && state.trickLeader === hIdx) ? '★' : '';
 }
 
 // ── Card element builder ──────────────────────────────────────────────────────
