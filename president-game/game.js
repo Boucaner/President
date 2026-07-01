@@ -224,9 +224,10 @@ function applyPlay(playerIdx, cards) {
     if (i !== -1) player.hand.splice(i, 1);
   });
 
+  const openingTrick = state.pile.length === 0;
   state.pile = cards;
   cards.forEach(c => { state.valuePlayed[c.value] = (state.valuePlayed[c.value] || 0) + 1; });
-  state.trickLeader = playerIdx;
+  if (openingTrick) state.trickLeader = playerIdx;
   state.lastPlayedBy = playerIdx;
   state.passCount = 0;
   state.trickTurns++;
@@ -249,7 +250,7 @@ function applyPlay(playerIdx, cards) {
 
   // One-time-around: all players have had their one action this trick
   if (state.settings.oneTimeAround && state.trickTurns >= state.trickPlayerCount) {
-    endTrick(state.trickLeader);
+    endTrick(state.lastPlayedBy);
     return;
   }
 
@@ -263,7 +264,7 @@ function applyPass(playerIdx) {
   if (state.settings.oneTimeAround) {
     // Each player gets exactly one action per trick; end when all have acted
     if (state.trickTurns >= state.trickPlayerCount) {
-      endTrick(state.trickLeader);
+      endTrick(state.lastPlayedBy);
       return;
     }
   } else {
@@ -274,7 +275,7 @@ function applyPass(playerIdx) {
     const lastPlayerActive = !state.players[state.lastPlayedBy].finished;
     const neededPasses = activePlayers.length - (lastPlayerActive ? 1 : 0);
     if (state.passCount >= neededPasses) {
-      endTrick(state.trickLeader);
+      endTrick(state.lastPlayedBy);
       return;
     }
   }
