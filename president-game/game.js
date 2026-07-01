@@ -699,6 +699,23 @@ function aiTakeTurn(playerIdx) {
   }
 }
 
+// Highest non-trump rank we can safely lead: no opponent can beat it because
+// (a) we hold all remaining 2s, and (b) all non-2 cards of higher rank are
+// either already played or in our own hand. Returns -1 if nothing is safe.
+function highestSafeLeadRank(hand, valuePlayed, iHoldAllTwos) {
+  if (!iHoldAllTwos) return -1;
+  const inHand = {};
+  hand.forEach(c => { if (c.value !== '2') inHand[c.rank] = (inHand[c.rank] || 0) + 1; });
+  for (let R = 11; R >= 0; R--) {
+    let ok = true;
+    for (let r = R + 1; r <= 11; r++) {
+      if ((valuePlayed[VALUES[r]] || 0) + (inHand[r] || 0) < 4) { ok = false; break; }
+    }
+    if (ok) return R;
+  }
+  return -1;
+}
+
 function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leaderHandSize, minOppCards) {
   const pileCount = pile.length;
   const pileRank  = pileCount > 0 ? pile[0].rank : -1;
@@ -719,9 +736,11 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leade
   const twosPlayed  = valuePlayed['2'] || 0;
   const iHoldAllTwos = twos.length > 0 && twos.length >= (4 - twosPlayed);
 
+  const safeLeadRank = highestSafeLeadRank(hand, valuePlayed, iHoldAllTwos);
+
   const is2P = oppHandSize !== undefined;
   return pileCount === 0
-    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards)
+    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards, safeLeadRank)
     : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P, leaderHandSize);
 }
 
@@ -733,7 +752,7 @@ function rollLeadGroup(style, target) {
   return Math.random() < p;
 }
 
-function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards) {
+function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards, safeLeadRank) {
   // Universal: only 2s remain — lead them all
   if (nonTwoGroups.length === 0 && twos.length > 0) return twos;
 
@@ -782,9 +801,11 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
         b.length !== a.length ? b.length - a.length : a[0].rank - b[0].rank);
       if (byCount.length > 0) return byCount[0];
     } else {
-      // 4+ player conservative/neutral: endgame then lead lowest
-      if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
-        return nonTwoGroups[nonTwoGroups.length - 1];
+      // 4+ player conservative/neutral: endgame — lead highest card we can guarantee wins
+      if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0 && safeLeadRank >= 0) {
+        const safeGroups = nonTwoGroups.filter(g => g[0].rank <= safeLeadRank);
+        if (safeGroups.length > 0) return safeGroups[safeGroups.length - 1];
+      }
       if (nonTwoGroups.length > 0) {
         // Depletion tactic: lead a low pair (3-T) to force opponents to burn higher pairs
         const deplPairs = nonTwoGroups.filter(g => g.length === 2 && g[0].rank <= 7);
@@ -822,9 +843,11 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
     if (twos.length > 0) return [twos[0]];
     return [hand[0]];
   }
-  // conservative / neutral, middle: lead lowest group; use 2 as endgame insurance
-  if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0)
-    return nonTwoGroups[nonTwoGroups.length - 1];
+  // conservative / neutral, middle: endgame — lead highest card we can guarantee wins
+  if (twos.length > 0 && hand.length <= 4 && nonTwoGroups.length > 0 && safeLeadRank >= 0) {
+    const safeGroups = nonTwoGroups.filter(g => g[0].rank <= safeLeadRank);
+    if (safeGroups.length > 0) return safeGroups[safeGroups.length - 1];
+  }
   if (nonTwoGroups.length > 0) {
     // Depletion tactic: lead a low pair (3-T) to force opponents to burn higher pairs
     const deplPairs = nonTwoGroups.filter(g => g.length === 2 && g[0].rank <= 7);
