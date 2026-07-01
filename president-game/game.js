@@ -452,24 +452,81 @@ function advanceKittyExchange() {
   state.phase = 'playing';
 }
 
+// Per-role pair bonus: how much extra each pair (beyond raw rank sum) is worth.
+// Pair n=2: +bonus, triple n=3: +bonus*2, quad n=4: +bonus*3.
+// President values exit speed less (already powerful), Wiper values groups more (any play matters).
+function rolePairBonus(role) {
+  if (role === 'President')      return 1.0;
+  if (role === 'Vice President') return 1.8;
+  if (role === 'Neutral')        return 2.5;
+  if (role === 'Vice Wiper')     return 3.0;
+  return 3.5; // Wiper
+}
+
+// Score a hand: rank sum + role-adjusted group bonuses.
+// Pair of 7s (President) = 4*2+1.0=9.0 > single J (8) → keep pair.
+// Pair of 6s (President) = 3*2+1.0=7.0 < single J (8) → give pair.
+function handQuality(cards, pairBonus) {
+  const counts = {};
+  for (const c of cards) counts[c.rank] = (counts[c.rank] || 0) + 1;
+  let score = 0;
+  for (const r in counts) {
+    const n = counts[r], rv = Number(r);
+    score += rv * n + (n >= 2 ? pairBonus * (n - 1) : 0);
+  }
+  return score;
+}
+
+// Returns the `count` cards from `pool` to give away that maximise remaining hand quality.
+// Enumerates all C(pool, count) combos — pool ~13, count ≤ 2 → at most 78 iterations.
+function chooseBestGiveBack(pool, count, pairBonus) {
+  if (pool.length <= count) return [...pool];
+  let bestScore = -Infinity, bestGive = null;
+  function choose(start, chosen) {
+    if (chosen.length === count) {
+      const keys = new Set(chosen.map(c => c.suit + c.value));
+      const kept = pool.filter(c => !keys.has(c.suit + c.value));
+      const score = handQuality(kept, pairBonus);
+      if (score > bestScore) { bestScore = score; bestGive = [...chosen]; }
+      return;
+    }
+    for (let i = start; i <= pool.length - (count - chosen.length); i++) {
+      chosen.push(pool[i]);
+      choose(i + 1, chosen);
+      chosen.pop();
+    }
+  }
+  choose(0, []);
+  return bestGive;
+}
+
 function aiDoKittyExchange(playerIdx) {
   const kx = state.kittyExchange;
   const player = state.players[playerIdx];
-  const sortedKitty = [...kx.kitty].sort((a, b) => b.rank - a.rank);
-  const sortedHand  = [...player.hand].sort((a, b) => a.rank - b.rank);
-  const give = [], take = [];
-  for (let i = 0; i < sortedKitty.length && i < sortedHand.length; i++) {
-    if (sortedKitty[i].rank > sortedHand[i].rank) {
-      take.push(sortedKitty[i]);
-      give.push(sortedHand[i]);
-    } else break;
+  const kitty = [...kx.kitty];
+  const pb = rolePairBonus(player.role);
+
+  // Try every non-empty subset of kitty cards; pick the swap that maximises hand quality.
+  // Baseline: take nothing.
+  let bestScore = handQuality(player.hand, pb);
+  let bestTake = [], bestGive = [];
+
+  for (let mask = 1; mask < (1 << kitty.length); mask++) {
+    const take = kitty.filter((_, i) => mask & (1 << i));
+    const give = chooseBestGiveBack(player.hand, take.length, pb);
+    if (!give) continue;
+    const giveKeys = new Set(give.map(c => c.suit + c.value));
+    const simHand = [...player.hand.filter(c => !giveKeys.has(c.suit + c.value)), ...take];
+    const score = handQuality(simHand, pb);
+    if (score > bestScore) { bestScore = score; bestTake = take; bestGive = give; }
   }
-  take.forEach(c => {
+
+  bestTake.forEach(c => {
     const i = kx.kitty.findIndex(k => k.suit === c.suit && k.value === c.value);
     if (i !== -1) kx.kitty.splice(i, 1);
     player.hand.push(c);
   });
-  give.forEach(c => {
+  bestGive.forEach(c => {
     const i = player.hand.findIndex(h => h.suit === c.suit && h.value === c.value);
     if (i !== -1) player.hand.splice(i, 1);
     kx.kitty.push(c);
@@ -545,7 +602,7 @@ function startTrading() {
     const receivedKeys = new Set(presReceived.map(c => c.suit + c.value));
     const original = state.players[presIdx].hand.filter(c => !receivedKeys.has(c.suit + c.value));
     const pool = original.length >= tc ? original : state.players[presIdx].hand;
-    const giveBack = [...pool].sort((a, b) => a.rank - b.rank).slice(0, tc);
+    const giveBack = chooseBestGiveBack(pool, tc, rolePairBonus('President'));
     giveBack.forEach(c => {
       const i = state.players[presIdx].hand.findIndex(h => h.suit === c.suit && h.value === c.value);
       if (i !== -1) state.players[presIdx].hand.splice(i, 1);
@@ -560,7 +617,7 @@ function startTrading() {
     const receivedKeys = new Set(vpReceived.map(c => c.suit + c.value));
     const original = state.players[vpIdx].hand.filter(c => !receivedKeys.has(c.suit + c.value));
     const pool = original.length >= 1 ? original : state.players[vpIdx].hand;
-    const worst = [...pool].sort((a, b) => a.rank - b.rank)[0];
+    const worst = chooseBestGiveBack(pool, 1, rolePairBonus('Vice President'))[0];
     if (worst) {
       const i = state.players[vpIdx].hand.findIndex(h => h.suit === worst.suit && h.value === worst.value);
       if (i !== -1) state.players[vpIdx].hand.splice(i, 1);
@@ -630,7 +687,9 @@ function aiTakeTurn(playerIdx) {
 
   const opp = state.players.length === 2 ? state.players.find(p => p !== player) : null;
   const leaderHandSize = state.pile.length > 0 ? state.players[state.lastPlayedBy].hand.length : undefined;
-  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed, opp ? opp.hand.length : undefined, leaderHandSize);
+  const activeOpps = state.players.filter(p => p !== player && !p.finished && p.hand.length > 0);
+  const minOppCards = activeOpps.length > 0 ? Math.min(...activeOpps.map(p => p.hand.length)) : 999;
+  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed, opp ? opp.hand.length : undefined, leaderHandSize, minOppCards);
   if (play) {
     applyPlay(playerIdx, play);
     return { action: 'play', cards: play };
@@ -640,7 +699,7 @@ function aiTakeTurn(playerIdx) {
   }
 }
 
-function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leaderHandSize) {
+function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leaderHandSize, minOppCards) {
   const pileCount = pile.length;
   const pileRank  = pileCount > 0 ? pile[0].rank : -1;
 
@@ -662,7 +721,7 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leade
 
   const is2P = oppHandSize !== undefined;
   return pileCount === 0
-    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize)
+    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards)
     : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P, leaderHandSize);
 }
 
@@ -674,7 +733,7 @@ function rollLeadGroup(style, target) {
   return Math.random() < p;
 }
 
-function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize) {
+function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards) {
   // Universal: only 2s remain — lead them all
   if (nonTwoGroups.length === 0 && twos.length > 0) return twos;
 
@@ -685,6 +744,17 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
   // lead the 2 first — keeps non-2 cards as the exit play rather than risking a 2 as last card.
   if (target !== 'survive' && twos.length > 0 && nonTwoGroups.length === 1) {
     if (hand.length - nonTwoGroups[0].length === twos.length) return [twos[0]];
+  }
+
+  // Unbeatable groups: no active opponent has enough cards to match this group size, so no one
+  // can respond regardless of what they hold. Lead the largest unbeatable group first (maximum
+  // exit progress), tie-breaking by lowest rank to shed cheap cards before high ones.
+  if (minOppCards !== undefined && nonTwoGroups.length > 0) {
+    const unbeatable = nonTwoGroups.filter(g => g.length > minOppCards);
+    if (unbeatable.length > 0) {
+      unbeatable.sort((a, b) => b.length - a.length || a[0].rank - b[0].rank);
+      return unbeatable[0];
+    }
   }
 
   if (target === 'top') {
