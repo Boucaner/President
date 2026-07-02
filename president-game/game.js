@@ -690,7 +690,17 @@ function aiTakeTurn(playerIdx) {
   const leaderHandSize = state.pile.length > 0 ? state.players[state.lastPlayedBy].hand.length : undefined;
   const activeOpps = state.players.filter(p => p !== player && !p.finished && p.hand.length > 0);
   const minOppCards = activeOpps.length > 0 ? Math.min(...activeOpps.map(p => p.hand.length)) : 999;
-  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', player.target || 'middle', state.valuePlayed, opp ? opp.hand.length : undefined, leaderHandSize, minOppCards);
+
+  // Wiper in 'survive' mode is too passive in the endgame — nothing to lose, need to compete.
+  // At 2 active players: always upgrade to 'middle'. At 3: 65% chance.
+  let effectiveTarget = player.target || 'middle';
+  if (effectiveTarget === 'survive' && player.role === 'Wiper') {
+    const activePlayers = activeOpps.length + 1;
+    if (activePlayers <= 2 || (activePlayers === 3 && Math.random() < 0.65))
+      effectiveTarget = 'middle';
+  }
+
+  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', effectiveTarget, state.valuePlayed, opp ? opp.hand.length : undefined, leaderHandSize, minOppCards);
   if (play) {
     applyPlay(playerIdx, play);
     return { action: 'play', cards: play };
