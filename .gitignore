@@ -1,0 +1,15 @@
+# This repo should only ever contain president-game/ and this README.
+# Everything else here is a separate, unrelated project — never let
+# a broad `git add` sweep it into the President repo.
+Flippy/
+Flippy-Vercel/
+Keys/
+MyWeatherApp/
+MyWeatherApp - Copy/
+ObsidianVaults/
+Scoundrel/
+Spite and Malice/
+StratGame/
+Suzi Q/
+War/
+Wiggi Wiggi/
