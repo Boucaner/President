@@ -700,7 +700,7 @@ function aiTakeTurn(playerIdx) {
       effectiveTarget = 'middle';
   }
 
-  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', effectiveTarget, state.valuePlayed, opp ? opp.hand.length : undefined, leaderHandSize, minOppCards);
+  const play = aiChoosePlay(player.hand, state.pile, player.style || 'neutral', effectiveTarget, state.valuePlayed, opp ? opp.hand.length : undefined, leaderHandSize, minOppCards, player.role, state.roundNum);
   if (play) {
     applyPlay(playerIdx, play);
     return { action: 'play', cards: play };
@@ -727,7 +727,7 @@ function highestSafeLeadRank(hand, valuePlayed, iHoldAllTwos) {
   return -1;
 }
 
-function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leaderHandSize, minOppCards) {
+function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leaderHandSize, minOppCards, role, roundNum) {
   const pileCount = pile.length;
   const pileRank  = pileCount > 0 ? pile[0].rank : -1;
 
@@ -751,19 +751,42 @@ function aiChoosePlay(hand, pile, style, target, valuePlayed, oppHandSize, leade
 
   const is2P = oppHandSize !== undefined;
   return pileCount === 0
-    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards, safeLeadRank)
+    ? aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards, safeLeadRank, role, roundNum)
     : aiFollow(nonTwoGroups, twos, pileCount, pileRank, style, target, hand, valuePlayed, is2P, leaderHandSize);
 }
 
 // Probability that conservative/neutral leads a full 3+ card group vs. shedding a single instead.
-function rollLeadGroup(style, target) {
-  const p = style === 'neutral'
+// Three motivations, mutually exclusive (each is a distinct reason to reveal or hide — stacking
+// them just cancels each other out, e.g. a confident flex diluted back to a coin-flip by the
+// concealment instinct), checked in priority order:
+//  - Intimidation: a genuinely strong President/VP early in the round flexes on purpose —
+//    "don't bother chasing me, I'm out fast." Real signal, real strength, real early game.
+//  - Bluff: occasionally, a middling hand borrows the same flashy play to fake strength, hoping
+//    opponents read it as a real threat and play passively. Not every middling hand bluffs —
+//    only sometimes, or it's just a permanently higher base rate rather than a real bluff.
+//  - Delayed reveal: otherwise, while there's still plenty of hand left, holding the group back
+//    makes remaining turns look longer than they really are. Fades as hand size drops.
+function rollLeadGroup(style, target, role, roundNum, handSize) {
+  let p = style === 'neutral'
     ? (target === 'top' ? 0.72 : 0.55)
     : (target === 'top' ? 0.48 : 0.25);
-  return Math.random() < p;
+
+  const isLeadRole = role === 'President' || role === 'Vice President';
+  const intimidating = target === 'top' && isLeadRole && roundNum <= 2;
+  const bluffing = target === 'middle' && Math.random() < 0.35;
+
+  if (intimidating) {
+    p = Math.max(p, 0.9);
+  } else if (bluffing) {
+    p += 0.15;
+  } else if (handSize > 6) {
+    p -= 0.25;
+  }
+
+  return Math.random() < Math.min(0.95, Math.max(0.05, p));
 }
 
-function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards, safeLeadRank) {
+function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSize, minOppCards, safeLeadRank, role, roundNum) {
   // Universal: only 2s remain — lead them all
   if (nonTwoGroups.length === 0 && twos.length > 0) return twos;
 
@@ -823,7 +846,7 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
         const hasSingles = nonTwoGroups.some(g => g.length === 1);
         if (deplPairs.length > 0 && hasSingles) return deplPairs[0];
         const cand = nonTwoGroups[0];
-        if (cand.length >= 3 && !rollLeadGroup(style, target)) {
+        if (cand.length >= 3 && !rollLeadGroup(style, target, role, roundNum, hand.length)) {
           const singles = nonTwoGroups.filter(g => g.length === 1);
           if (singles.length > 0) return [singles[0][0]];
           return [cand[0]];
@@ -865,7 +888,7 @@ function aiLead(nonTwoGroups, twos, hand, style, target, iHoldAllTwos, oppHandSi
     const hasSingles = nonTwoGroups.some(g => g.length === 1);
     if (deplPairs.length > 0 && hasSingles && Math.random() < 0.55) return deplPairs[0];
     const cand = nonTwoGroups[0];
-    if (cand.length >= 3 && !rollLeadGroup(style, target)) {
+    if (cand.length >= 3 && !rollLeadGroup(style, target, role, roundNum, hand.length)) {
       const singles = nonTwoGroups.filter(g => g.length === 1);
       if (singles.length > 0) return [singles[0][0]];
       return [cand[0]];
