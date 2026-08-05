@@ -3,6 +3,7 @@
 # a broad `git add` sweep it into the President repo.
 Flippy/
 Flippy-Vercel/
+FreeAppsToEnjoy/
 Keys/
 MyWeatherApp/
 MyWeatherApp - Copy/
@@ -13,3 +14,6 @@ StratGame/
 Suzi Q/
 War/
 Wiggi Wiggi/
+
+# Local Netlify folder
+.netlify
