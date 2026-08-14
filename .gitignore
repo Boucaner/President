@@ -1,6 +1,7 @@
 # This repo should only ever contain president-game/ and this README.
 # Everything else here is a separate, unrelated project — never let
 # a broad `git add` sweep it into the President repo.
+avast/
 Flippy/
 Flippy-Vercel/
 FreeAppsToEnjoy/
